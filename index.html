@@ -311,6 +311,7 @@ li.past .ms-label{color:var(--ink-soft)}
 #assignee-results img{width:22px;height:22px;border-radius:50%}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:13px;z-index:90}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:80}
+#pfx{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%);image-rendering:pixelated;z-index:85;pointer-events:none}
 body.readonly .write-only{display:none!important}
 @media (prefers-reduced-motion:reduce){
   .task:hover{transform:none}
@@ -672,6 +673,7 @@ body.readonly .write-only{display:none!important}
 </div>
 <div id="toast" hidden></div>
 <canvas id="fx"></canvas>
+<canvas id="pfx" hidden></canvas>
 
 <script>
 "use strict";
@@ -925,7 +927,7 @@ function renderCamp(suppressFx){
     ? `再完成 ${next.xp - xp} 个任务,营地解锁「${next.name}」(所有比赛的任务都算)`
     : "营地满级,你们已经是传奇了。";
   if (!suppressFx && tasksLoaded && prevXp !== null && idx > campLevelIdx(prevXp)) {
-    celebrate(140);
+    if (!(window.playPixelFx && window.playPixelFx("firework"))) celebrate(140);
     toast(`营地升级:${LEVELS[idx].name}`);
   }
   if (tasksLoaded) prevXp = xp;
@@ -965,7 +967,9 @@ function celebrate(n){
   })(t0);
 }
 function celebrateFor(rarity){
-  celebrate(rarity === "legend" ? 160 : rarity === "epic" ? 100 : rarity === "rare" ? 56 : 30);
+  const big = rarity === "legend" || rarity === "epic";
+  if (window.playPixelFx && window.playPixelFx(big ? "quest" : "confetti")) return;
+  celebrate(big ? 140 : 40);
 }
 
 /* ---------- tabs ---------- */
@@ -1718,6 +1722,53 @@ function renderPresence(){
   const cnt = names.size + anon;
   $("#presence").textContent = cnt <= 1 ? "现在营地里只有你" : cnt === 2 ? "两个人都在营地,双倍战斗力 ♥" : `${cnt} 人在营地,一起冲 ✦`;
 }
+</script>
+<script type="module">
+/* 像素特效(pixelfx,MIT,by patch-gg):任务完成/升级的庆祝动画;加载失败时自动回退方块彩带 */
+try {
+  const core = await import("./pixelfx/core/index.js");
+  const [quest, firework, confetti] = await Promise.all([
+    import("./pixelfx/fx/ui/quest-complete.js"),
+    import("./pixelfx/fx/explosions/firework-burst.js"),
+    import("./pixelfx/fx/ui/confetti.js"),
+  ]);
+  const MODS = { quest, firework, confetti };
+  let running = false;
+  window.playPixelFx = function (kind) {
+    try {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+      const mod = MODS[kind];
+      if (!mod || running) return !!mod;
+      const meta = mod.meta;
+      const cv = document.getElementById("pfx");
+      const [w, h] = meta.size;
+      const scale = Math.max(2, Math.min(4, Math.floor(Math.min(innerWidth * 0.86 / w, innerHeight * 0.55 / h))));
+      cv.width = w; cv.height = h;
+      cv.style.width = w * scale + "px";
+      cv.style.height = h * scale + "px";
+      cv.hidden = false;
+      running = true;
+      const ctx = cv.getContext("2d");
+      const frame = core.createFrame(w, h);
+      const img = new ImageData(w, h);
+      const fx = core.createFx(mod, { x: meta.origin[0], y: meta.origin[1] });
+      let last = performance.now(), elapsed = 0;
+      (function tick(now) {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now; elapsed += dt;
+        fx.update(dt);
+        core.clearFrame(frame);
+        fx.draw(frame, "back");
+        fx.draw(frame, "front");
+        core.composite(frame, img.data, null);
+        ctx.putImageData(img, 0, 0);
+        if (elapsed < meta.duration) requestAnimationFrame(tick);
+        else { cv.hidden = true; running = false; }
+      })(last);
+      return true;
+    } catch (e) { running = false; return false; }
+  };
+} catch (e) { /* 模块加载失败则保持回退方案 */ }
 </script>
 </body>
 </html>
