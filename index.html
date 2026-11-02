@@ -1,0 +1,420 @@
+<title>备赛小站介绍</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="备赛小站:两个人一起打比赛的协作工作站。倒计时、任务板、提交清单、资源库和便签,全队实时同步。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+/* 备赛小站的介绍落地页。视觉值全部来自 landing-page-design 规范:
+   间距表、Tailwind 字阶/圆角、hero 文字渐变(浅#000→#666 / 深#FFF→#9B9B9B)、基础动效曲线。
+   单字体 Poppins,配色沿用小站本体(珊瑚橙强调色),亮暗双主题。 */
+:root{
+  --bg:#F5F3F7;
+  --surface:#FFFFFF;
+  --surface-2:#FAF8FC;
+  --ink:#2B2433;
+  --ink-soft:#73688A;
+  --line:#E2DCEC;
+  --accent:#F06D5A;
+  --accent-hover:#E25B47;
+  --accent-ink:#FFFFFF;
+  --nav-bg:rgba(255,255,255,.72);
+  --shadow:0 12px 32px rgba(43,36,51,.10);
+  --h-g1:#000000; --h-g2:#666666;
+  --curve:cubic-bezier(.22,1,.36,1);
+  --font:"Poppins",ui-sans-serif,system-ui,"PingFang SC","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#181818; --surface:#1F1F1F; --surface-2:#272727;
+    --ink:#EEE9F4; --ink-soft:#A598BE; --line:#383046;
+    --accent:#FF8A76; --accent-hover:#FF9D8C; --accent-ink:#2B130D;
+    --nav-bg:rgba(31,31,31,.72);
+    --shadow:0 12px 32px rgba(0,0,0,.45);
+    --h-g1:#FFFFFF; --h-g2:#9B9B9B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#181818; --surface:#1F1F1F; --surface-2:#272727;
+  --ink:#EEE9F4; --ink-soft:#A598BE; --line:#383046;
+  --accent:#FF8A76; --accent-hover:#FF9D8C; --accent-ink:#2B130D;
+  --nav-bg:rgba(31,31,31,.72);
+  --h-g1:#FFFFFF; --h-g2:#9B9B9B;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--font); font-size:16px; line-height:1.5;
+  margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 0;
+}
+
+/* ---- 文本样式(B1 命名样式) ---- */
+.heading-1{font-size:36px;line-height:40px;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+@media (min-width:720px){.heading-1{font-size:60px;line-height:60px}}
+.heading-3{font-size:30px;line-height:36px;font-weight:600;text-wrap:balance;margin:0}
+@media (min-width:720px){.heading-3{font-size:36px;line-height:40px}}
+.title-1{font-size:20px;line-height:28px;font-weight:500;margin:0}
+.title-3{font-size:16px;line-height:24px;font-weight:500;margin:0}
+.title-4{font-size:14px;line-height:20px;font-weight:500;margin:0}
+.body-2{font-size:16px;line-height:24px;font-weight:500;margin:0;text-wrap:pretty}
+.body-3{font-size:16px;line-height:24px;font-weight:400;margin:0;text-wrap:pretty}
+.body-6{font-size:14px;line-height:20px;font-weight:400;margin:0;text-wrap:pretty}
+.button-md{font-size:16px;line-height:24px;font-weight:600}
+.button-sm{font-size:14px;line-height:20px;font-weight:600}
+.caption-1{font-size:14px;line-height:20px;font-weight:500;margin:0}
+.caption-3{font-size:12px;line-height:16px;font-weight:600;margin:0;letter-spacing:.08em;text-transform:uppercase}
+.caption-5{font-size:12px;line-height:16px;font-weight:400;margin:0}
+.muted{color:var(--ink-soft)}
+
+.skip{position:absolute;left:-9999px;top:0;background:var(--accent);color:var(--accent-ink);padding:8px 12px;border-radius:8px;z-index:99}
+.skip:focus{left:16px;top:calc(env(safe-area-inset-top,0px) + 16px)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- 悬浮导航 ---- */
+nav.bar{
+  position:fixed;left:50%;transform:translateX(-50%);
+  top:calc(env(safe-area-inset-top,0px) + 12px);
+  display:flex;align-items:center;gap:16px;
+  padding:8px 16px;border-radius:9999px;
+  background:var(--nav-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--line);z-index:50;max-width:calc(100% - 32px);
+}
+nav.bar .logo{color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px;white-space:nowrap}
+nav.bar .logo svg{color:var(--accent)}
+nav.bar a.nl{color:var(--ink-soft);text-decoration:none;white-space:nowrap;transition:color .3s var(--curve)}
+nav.bar a.nl:hover{color:var(--ink)}
+
+/* ---- 按钮 ---- */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:8px;border:1px solid var(--accent);
+  background:var(--accent);color:var(--accent-ink);text-decoration:none;cursor:pointer;
+  transition:background-color .3s var(--curve),transform .3s var(--curve);
+}
+.btn:hover{background:var(--accent-hover);border-color:var(--accent-hover);transform:translateY(-1px)}
+.btn:active{transform:scale(.98)}
+.btn svg{transition:transform .3s var(--curve)}
+.btn:hover svg{transform:translate(2px,-2px)}
+.nav-cta{padding:4px 12px;border-radius:9999px}
+
+/* ---- 版面 ---- */
+.wrap{max-width:1040px;margin:0 auto}
+section{padding-block:80px;scroll-margin-top:96px}
+header.hero{padding-block:96px 80px;text-align:center}
+.hero-inner{max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:24px}
+.hero-h{
+  background:linear-gradient(90deg,var(--h-g1),var(--h-g2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.eyebrow{color:var(--accent)}
+.sec-head{display:flex;flex-direction:column;gap:12px;margin-bottom:40px;max-width:680px}
+
+/* ---- hero 小插画:迷你看板 ---- */
+.mini{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:16px;text-align:left}
+.mini .mrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.mini .cd{display:flex;gap:4px}
+.mini .cd b{font-weight:600;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-variant-numeric:tabular-nums}
+.mini .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mini .mcol{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.mini .chip{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini .chip.done{color:var(--ink-soft);text-decoration:line-through}
+.mini .dot{display:inline-block;width:8px;height:8px;border-radius:9999px;background:var(--accent);margin-right:4px}
+.mini .pb{flex:1;height:8px;border-radius:9999px;background:var(--bg);border:1px solid var(--line);overflow:hidden;min-width:80px}
+.mini .pb i{display:block;height:100%;width:40%;background:var(--accent);border-radius:9999px}
+.mini .av{display:flex}
+.mini .av b{width:20px;height:20px;border-radius:9999px;border:2px solid var(--surface);background:var(--accent);display:block}
+.mini .av b+b{margin-left:-6px;background:#7A6AE6}
+
+/* ---- 卡片 ---- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;min-width:0;transition:transform .5s var(--curve),box-shadow .5s var(--curve)}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.grid-3{grid-template-columns:minmax(0,1fr)}}
+.pain{display:flex;gap:12px;align-items:flex-start;padding:16px}
+.pain .x{color:var(--accent);flex:none;margin-top:2px}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.grid-2{grid-template-columns:minmax(0,1fr)}}
+.bene{display:flex;flex-direction:column;gap:12px}
+.bene .ic{width:40px;height:40px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--accent)}
+
+/* ---- FAQ ---- */
+.qa{display:flex;flex-direction:column;gap:12px;max-width:680px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+details.q summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px 24px;border-radius:16px;transition:background-color .3s var(--curve)}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary:hover{background:var(--surface-2)}
+details.q .plus{flex:none;width:16px;height:16px;position:relative;transition:transform .5s var(--curve)}
+details.q .plus::before,details.q .plus::after{content:"";position:absolute;background:var(--accent);border-radius:2px}
+details.q .plus::before{left:7px;top:0;width:2px;height:16px}
+details.q .plus::after{left:0;top:7px;width:16px;height:2px}
+details.q[open] .plus{transform:rotate(135deg)}
+details.q .ans{padding:0 24px 16px;display:flex;flex-direction:column;gap:12px}
+details.q[open] .ans{animation:ansin .5s var(--curve)}
+@keyframes ansin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---- 步骤 ---- */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.steps{grid-template-columns:minmax(0,1fr)}}
+.step{display:flex;flex-direction:column;gap:12px}
+.step .no{width:40px;height:40px;border-radius:9999px;border:1px solid var(--line);background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:600}
+
+/* ---- 标语逐词点亮 ---- */
+.tagline{padding-block:96px;display:flex;justify-content:center}
+.tagline .tl{max-width:680px;text-align:center}
+.tl .w{display:inline-block;transition:opacity .5s var(--curve)}
+.tl .w.dim{opacity:.3}
+
+/* ---- 滚动显现(JS 才会加 .pre,静态帧完整) ---- */
+.pre{opacity:0;transform:translateY(32px)}
+.pre.on{opacity:1;transform:none;transition:opacity .7s var(--curve),transform .7s var(--curve)}
+@media (prefers-reduced-motion:reduce){
+  .pre{opacity:1;transform:none}
+  .tl .w.dim{opacity:1}
+  .btn:hover{transform:none}
+  .btn:hover svg{transform:none}
+  .card:hover{transform:none;box-shadow:none}
+  details.q[open] .ans{animation:none}
+}
+
+footer{border-top:1px solid var(--line);padding-block:40px 48px;margin-top:80px}
+footer .frow{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between}
+.foot-dis{color:var(--ink-soft);opacity:.55;cursor:not-allowed}
+.flink{color:var(--ink-soft);text-decoration:none;transition:color .3s var(--curve)}
+.flink:hover{color:var(--ink)}
+img,svg{max-width:100%}
+</style>
+
+<a class="skip button-sm" href="#main">跳到正文</a>
+
+<nav class="bar" aria-label="页面导航">
+  <a class="logo title-4" href="#top" aria-current="page">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 8v8M12 8v5M16 8v8"/></svg>
+    备赛小站
+  </a>
+  <a class="nl title-4" href="#feat">功能</a>
+  <a class="nl title-4" href="#how">流程</a>
+  <a class="nl title-4" href="#faq">问答</a>
+  <a class="btn button-sm nav-cta" href="https://claude.ai/artifact/Aak4QiqvzHVszJPk5Fw3SE" target="_blank" rel="noopener noreferrer">打开小站</a>
+</nav>
+
+<span id="top"></span>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="caption-3 eyebrow">两个人的备赛工作站</p>
+    <h1 class="heading-1 hero-h">比赛的事,<br>放在一个地方</h1>
+    <p class="body-3 muted">倒计时、任务板、提交清单、资源库和便签,全队实时同步。打开同一个链接,谁改了什么,另一个人立刻看见。</p>
+    <a class="btn button-md" href="https://claude.ai/artifact/Aak4QiqvzHVszJPk5Fw3SE" target="_blank" rel="noopener noreferrer">打开备赛小站
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+    </a>
+    <p class="caption-1 muted">正在服役:CartesianForms 2026 与 Kiroween 2026 双赛道。</p>
+    <div class="mini" role="img" aria-label="小站界面示意:倒计时和三列任务板">
+      <div class="mrow">
+        <span class="title-4"><span class="dot" aria-hidden="true"></span>Kiroween 2026</span>
+        <span class="cd caption-1 muted">还剩 <b id="md">34</b> 天 <b id="mh">07</b> 时 <b id="mm">52</b> 分 <b id="ms">10</b> 秒</span>
+      </div>
+      <div class="cols caption-5">
+        <div class="mcol"><span class="caption-3 muted">待办</span><span class="chip">录 demo 视频</span><span class="chip">写使用说明</span></div>
+        <div class="mcol"><span class="caption-3 muted">进行中</span><span class="chip">问题推导引擎</span></div>
+        <div class="mcol"><span class="caption-3 muted">完成</span><span class="chip done">选赛道</span><span class="chip done">建仓库</span></div>
+      </div>
+      <div class="mrow">
+        <span class="pb" aria-hidden="true"><i></i></span>
+        <span class="caption-5 muted">2 / 5 完成 · 稳扎稳打</span>
+        <span class="av" aria-hidden="true"><b></b><b></b></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+
+  <section class="rv" aria-label="问题与解法">
+    <div class="sec-head">
+      <p class="caption-3 eyebrow">为什么需要它</p>
+      <h2 class="heading-3">比赛最容易输给的,往往不是对手</h2>
+    </div>
+    <div class="grid-3">
+      <div class="card pain"><span class="x" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><p class="body-6 muted">截止日期记在三个地方,每个时区还不一样</p></div>
+      <div class="card pain"><span class="x" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><p class="body-6 muted">官网、文档和账号散落在聊天记录深处</p></div>
+      <div class="card pain"><span class="x" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><p class="body-6 muted">谁在做什么全靠问,提交前才发现漏了硬性要求</p></div>
+    </div>
+    <p class="body-2" style="max-width:680px;margin-top:24px">小站把这些全部收进一页:一个比赛一个标签,进去就是倒计时、任务、清单和资料。</p>
+  </section>
+
+  <section class="tagline rv" aria-label="标语">
+    <h2 class="heading-3 tl" id="tl"><span class="w">比赛</span><span class="w">可以</span><span class="w">紧张,</span><span class="w">协作</span><span class="w">不可以。</span><br><span class="w">东西</span><span class="w">都在</span><span class="w">一个地方,</span><span class="w">人</span><span class="w">就不慌。</span></h2>
+  </section>
+
+  <section id="feat" class="rv" aria-label="功能">
+    <div class="sec-head">
+      <p class="caption-3 eyebrow">功能</p>
+      <h2 class="heading-3">四件事,各管一段焦虑</h2>
+    </div>
+    <div class="grid-2">
+      <article class="card bene">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg></span>
+        <h3 class="title-1">倒计时盯着截止</h3>
+        <p class="body-6 muted">每个比赛一个精确到秒的倒计时,最后 24 小时整块变红。再也不用在三个日历之间核对时区。</p>
+      </article>
+      <article class="card bene">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15 4v16"/></svg></span>
+        <h3 class="title-1">任务板分清你我</h3>
+        <p class="body-6 muted">待办、进行中、完成三列,任务可认领、可移动。完成进度变成一条进度条,还会说两句鼓励的话。</p>
+      </article>
+      <article class="card bene">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 12h12M4 18h12"/><path d="M19 5l1.5 1.5L23 4"/><path d="M19 11l1.5 1.5L23 10"/></svg></span>
+        <h3 class="title-1">提交清单防漏交</h3>
+        <p class="body-6 muted">把官方的硬性要求一条条列进去,交之前逐项打勾。Kiroween 的五条提交要求已经内置好了。</p>
+      </article>
+      <article class="card bene">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="4"/><path d="M3 21c0-3.3 2.7-6 6-6M17 8a3 3 0 1 1 0 6M15 21c0-2.8 1.8-5 4.5-5.6"/></svg></span>
+        <h3 class="title-1">实时同步不用问</h3>
+        <p class="body-6 muted">链接、便签、任务状态即改即同步,页面顶部能看见谁在线。两个人都在时,它会提醒你们火力翻倍。</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="how" class="rv" aria-label="流程">
+    <div class="sec-head">
+      <p class="caption-3 eyebrow">流程</p>
+      <h2 class="heading-3">从组队到提交,三步</h2>
+    </div>
+    <div class="steps">
+      <article class="card step">
+        <span class="no" aria-hidden="true">1</span>
+        <h3 class="title-1">添加比赛</h3>
+        <p class="body-6 muted">填上名称、目标和截止时间,官网链接顺手收进资源库。支持多个比赛并行,顶部标签切换。</p>
+      </article>
+      <article class="card step">
+        <span class="no" aria-hidden="true">2</span>
+        <h3 class="title-1">拆任务,认领</h3>
+        <p class="body-6 muted">把活拆成卡片,各自认领。谁做什么、做到哪一步,看一眼任务板就知道,不用在聊天里追问。</p>
+      </article>
+      <article class="card step">
+        <span class="no" aria-hidden="true">3</span>
+        <h3 class="title-1">交前过清单</h3>
+        <p class="body-6 muted">提交前把官方要求逐项打勾。漏交一个文件就白干一个月,这一步替你兜底。</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="faq" class="rv" aria-label="常见问题">
+    <div class="sec-head">
+      <p class="caption-3 eyebrow">常见问题</p>
+      <h2 class="heading-3">你可能想问</h2>
+    </div>
+    <div class="qa">
+      <details class="q">
+        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">要花钱吗?要装什么吗?</span></summary>
+        <div class="ans"><p class="body-6 muted">不要钱,也不用安装。它是一个网页,浏览器打开链接就能用,手机和电脑都行。</p></div>
+      </details>
+      <details class="q">
+        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">队友怎么加入?</span></summary>
+        <div class="ans"><p class="body-6 muted">房主在页面右上角的 Share 菜单里邀请,给到 Contributor 或 Editor 权限就能一起编辑;只给 Viewer 则只能看。</p></div>
+      </details>
+      <details class="q">
+        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">数据存在哪里,会丢吗?</span></summary>
+        <div class="ans"><p class="body-6 muted">存在 claude.ai 为这个页面提供的共享数据库里,云端保存,改动实时同步给所有打开页面的人,关掉浏览器不会丢。</p></div>
+      </details>
+      <details class="q">
+        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">能同时管几个比赛?</span></summary>
+        <div class="ans"><p class="body-6 muted">不限数量。每个比赛是一个独立标签,各自有任务板、清单、资源库和便签,互不干扰。</p></div>
+      </details>
+      <details class="q">
+        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">不小心删错了怎么办?</span></summary>
+        <div class="ans"><p class="body-6 muted">所有删除都要点两次确认,删比赛前还会提醒会连带删掉它的任务和链接。特别重要的信息,建议在便签之外再留一份文档。</p></div>
+      </details>
+      <details class="q">
+        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">它是用什么做的?</span></summary>
+        <div class="ans"><p class="body-6 muted">一个无依赖的单页应用,发布在 claude.ai 的 Artifact 平台上,用它的共享数据库和在线状态能力实现实时协作。源码在本地 git 仓库里。</p></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="rv" aria-label="开始使用" style="text-align:center">
+    <div class="hero-inner">
+      <h2 class="heading-3">下一个截止日期,别再慌着找链接了</h2>
+      <p class="body-3 muted">免费,不用安装,打开就是你们的作战现场。</p>
+      <a class="btn button-md" href="https://claude.ai/artifact/Aak4QiqvzHVszJPk5Fw3SE" target="_blank" rel="noopener noreferrer">打开备赛小站
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap frow">
+    <p class="caption-5 muted">© 2026 备赛小站</p>
+    <p class="caption-5"><a class="flink" href="#feat">功能</a> · <a class="flink" href="#how">流程</a> · <a class="flink" href="#faq">问答</a></p>
+    <p class="caption-5"><span class="foot-dis">隐私政策(上线前补齐)</span> · <span class="foot-dis">使用条款(上线前补齐)</span></p>
+  </div>
+</footer>
+
+<script>
+"use strict";
+(function(){
+  var reduced = false;
+  try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  var hasIO = "IntersectionObserver" in window;
+
+  /* 滚动显现:只对首屏之外的区块加初始态,静态帧始终完整 */
+  if (!reduced && hasIO) {
+    var secs = document.querySelectorAll(".rv");
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { en.target.classList.add("on"); io.unobserve(en.target); }
+      });
+    }, { rootMargin: "0px 0px -10% 0px" });
+    secs.forEach(function(s){
+      if (s.getBoundingClientRect().top > window.innerHeight) {
+        s.classList.add("pre");
+        io.observe(s);
+      }
+    });
+  }
+
+  /* 标语逐词点亮(B11):无 JS 或减少动效时直接全亮 */
+  var tl = document.getElementById("tl");
+  if (tl && !reduced && hasIO) {
+    var words = tl.querySelectorAll(".w");
+    words.forEach(function(w){ w.classList.add("dim"); });
+    var queued = [];
+    var litNext = function(){
+      if (queued.length === 0) return;
+      queued.shift().classList.remove("dim");
+      if (queued.length) setTimeout(litNext, 90);
+    };
+    var wio = new IntersectionObserver(function(entries){
+      var had = queued.length > 0;
+      entries.forEach(function(en){
+        if (en.isIntersecting) { queued.push(en.target); wio.unobserve(en.target); }
+      });
+      if (!had && queued.length) litNext();
+    }, { rootMargin: "0px 0px -35% 0px" });
+    words.forEach(function(w){ wio.observe(w); });
+  }
+
+  /* hero 示意图里的倒计时真实走秒(演示数据) */
+  var md = document.getElementById("md"), mh = document.getElementById("mh"),
+      mm = document.getElementById("mm"), ms = document.getElementById("ms");
+  if (md && mh && mm && ms) {
+    var target = Date.now() + (((34 * 24 + 7) * 60 + 52) * 60 + 10) * 1000;
+    var pad = function(n){ return String(n).padStart(2, "0"); };
+    var tick = function(){
+      var t = Math.max(0, target - Date.now());
+      md.textContent = Math.floor(t / 86400000);
+      mh.textContent = pad(Math.floor(t / 3600000) % 24);
+      mm.textContent = pad(Math.floor(t / 60000) % 60);
+      ms.textContent = pad(Math.floor(t / 1000) % 60);
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+})();
+</script>
