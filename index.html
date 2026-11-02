@@ -1112,40 +1112,50 @@ function pixelPerson(body, hair, longHair, u){
   s += px(3, 13, 2, 1, "#4A3F33") + px(7, 13, 2, 1, "#4A3F33");
   return s + `</svg>`;
 }
+/* 同名 = 同一个人:多设备/多浏览器打开只要起同一个名字,就合并成一位队员 */
+const keyOf = n => String(n || "").trim().toLowerCase();
 function renderTeam(){
-  const score = new Map();
-  const bump = id => { if (id) score.set(id, (score.get(id) || 0) + 1); };
-  for (const t of state.tasks) if (t.assignee && t.status === "done") { bump(t.assignee); bump(t.assignee); }
-  for (const t of state.tasks) if (t.assignee && t.status === "doing") bump(t.assignee);
-  for (const l of state.links) bump(l.createdBy);
-  for (const c of state.checks) if (c.done) bump(c.doneBy);
-  for (const id of Object.keys(members)) if (!score.has(id)) score.set(id, 0);
-  const ids = [...score.keys()].sort((a, b) => score.get(b) - score.get(a)).slice(0, 6);
+  const groups = new Map();
+  const ensure = n => {
+    const k = keyOf(n);
+    if (!groups.has(k)) groups.set(k, { name: n, uids: new Set(), links: 0, checks: 0 });
+    return groups.get(k);
+  };
+  for (const [uid, m] of Object.entries(members)) {
+    const n = (m && m.name) || "";
+    if (!n) { if (uid === myId) ensure("你").uids.add(uid); continue; }
+    ensure(n).uids.add(uid);
+  }
+  for (const l of state.links) { const n = nameOf(l.createdBy); if (n) ensure(n).links++; }
+  for (const c of state.checks) if (c.done) { const n = nameOf(c.doneBy); if (n) ensure(n).checks++; }
+  const doneOf = g => state.tasks.filter(t => t.status === "done" && keyOf(t.assignee) === keyOf(g.name)).length;
+  const doingOf = g => state.tasks.filter(t => t.status === "doing" && keyOf(t.assignee) === keyOf(g.name)).length;
+  const list = [...groups.values()].sort((a, b) => (doneOf(b) * 3 + doingOf(b) + b.links + b.checks) - (doneOf(a) * 3 + doingOf(a) + a.links + a.checks)).slice(0, 6);
   const box = $("#team");
   box.textContent = "";
-  $("#team-empty").hidden = ids.length > 0;
+  $("#team-empty").hidden = list.length > 0;
   const TITLES = [[15, "传奇营建家"], [8, "营地主理人"], [4, "营地木匠"], [1, "生火师"], [0, "露营新人"]];
   const BADGES = ["👑", "🌙", "⭐", "🍀", "🫐", "🌰"];
   const dayMs = 86400000;
   const todayD = Math.floor(Date.now() / dayMs);
   let mi = 0;
-  for (const id of ids) {
-    const pname = nameOf(id);
+  for (const g of list) {
+    const pname = g.name;
     const longHair = /crystal/i.test(pname) ? true : /xuan/i.test(pname) ? false : mi === 0;
-    const doneN = state.tasks.filter(t => t.assignee === id && t.status === "done").length;
+    const doneN = doneOf(g);
     const mate = document.createElement("div"); mate.className = "mate";
     const pv = document.createElement("div"); pv.className = "pv";
     pv.innerHTML = pixelPerson(longHair ? "#6E8F5A" : "#5A7A9E", longHair ? "#4A3222" : "#2E2620", longHair, 5);
     mate.appendChild(pv);
     const nm = document.createElement("div"); nm.className = "nm";
-    nm.textContent = (pname || (id === myId ? "你" : "队友")) + " " + (BADGES[mi] || "");
+    nm.textContent = pname + " " + (BADGES[mi] || "");
     mate.appendChild(nm);
     const tl = document.createElement("div"); tl.className = "tl";
     tl.textContent = TITLES.find(x => doneN >= x[0])[1] + " · 完成 " + doneN;
     mate.appendChild(tl);
     const counts = new Array(14).fill(0);
     for (const l of state.logs) {
-      if (l.type === "task_done" && l.by === id) {
+      if (l.type === "task_done" && g.uids.has(l.by)) {
         const idx = 13 - (todayD - Math.floor(l.at / dayMs));
         if (idx >= 0 && idx < 14) counts[idx]++;
       }
@@ -1396,13 +1406,12 @@ function taskCard(t, ps){
   chip.type = "button";
   chip.className = "assignee" + (t.assignee ? "" : " unset");
   if (t.assignee) {
-    const p = ps[t.assignee];
     const img = document.createElement("img");
-    img.src = p ? p.avatarUrl : "";
+    img.src = avatarFor(t.assignee);
     img.alt = "";
     const nm = document.createElement("span");
     nm.className = "nm";
-    nm.textContent = (p && p.name) || "队友";
+    nm.textContent = esc(t.assignee);
     chip.append(img, nm);
   } else chip.textContent = "认领";
   if (canWrite) chip.addEventListener("click", e => { e.stopPropagation(); openAssignee(chip, t); });
@@ -1480,20 +1489,23 @@ function runSearch(q){
   };
   if (assigneeTask && assigneeTask.assignee) addOpt("取消分配", null, () => pickAssignee(null));
   const ql = q.trim().toLowerCase();
-  for (const [id, m] of Object.entries(members)) {
-    const nm = (m && m.name) || "";
+  const names = [...new Set(Object.values(members).map(m => (m && m.name) || "").filter(Boolean).map(n => n.trim()))];
+  for (const nm of names) {
     if (ql && !nm.toLowerCase().includes(ql)) continue;
-    addOpt(nm || (id === myId ? "我(还没起名)" : "无名队友"), avatarFor(id), () => pickAssignee(id));
+    addOpt(nm, avatarFor(nm), () => pickAssignee(nm));
   }
-  if (!Object.keys(members).length) {
+  if (ql && !names.some(n => n.toLowerCase() === ql)) {
+    addOpt(`指派给「${q.trim()}」`, avatarFor(q.trim()), () => pickAssignee(q.trim()));
+  }
+  if (!names.length && !ql) {
     const d = document.createElement("div");
     d.style.cssText = "font-size:12px;color:var(--ink-soft);padding:6px 8px";
-    d.textContent = "队友打开过这个页面并起了名字,就会出现在这里。";
+    d.textContent = "队友打开过这个页面并起了名字,就会出现在这里;也可以直接输入名字指派。";
     box.appendChild(d);
   }
 }
-function pickAssignee(id){
-  if (assigneeTask) guarded(db.collection("tasks").doc(assigneeTask.id).update({ assignee: id }));
+function pickAssignee(name){
+  if (assigneeTask) guarded(db.collection("tasks").doc(assigneeTask.id).update({ assignee: name }));
   $("#popover").hidden = true;
 }
 
@@ -1696,8 +1708,15 @@ async function renderLog(){
 /* ---------- 在线状态(心跳) ---------- */
 function renderPresence(){
   const now = Date.now();
-  const online = Object.values(members).filter(m => m && m.lastSeen && now - m.lastSeen < 75000).length;
-  $("#presence").textContent = online <= 1 ? "现在营地里只有你" : online === 2 ? "两个人都在营地,双倍战斗力 ♥" : `${online} 人在营地,一起冲 ✦`;
+  const names = new Set();
+  let anon = 0;
+  for (const m of Object.values(members)) {
+    if (!(m && m.lastSeen && now - m.lastSeen < 75000)) continue;
+    const n = keyOf((m && m.name) || "");
+    if (n) names.add(n); else anon++;
+  }
+  const cnt = names.size + anon;
+  $("#presence").textContent = cnt <= 1 ? "现在营地里只有你" : cnt === 2 ? "两个人都在营地,双倍战斗力 ♥" : `${cnt} 人在营地,一起冲 ✦`;
 }
 </script>
 </body>
