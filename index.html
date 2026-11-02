@@ -1,420 +1,1697 @@
-<title>备赛小站介绍</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="备赛小站:两个人一起打比赛的协作工作站。倒计时、任务板、提交清单、资源库和便签,全队实时同步。">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>备赛小站</title>
+<meta name="description" content="两个人的备赛营地:倒计时、任务板、提交清单、想法库,实时同步。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-/* 备赛小站的介绍落地页。视觉值全部来自 landing-page-design 规范:
-   间距表、Tailwind 字阶/圆角、hero 文字渐变(浅#000→#666 / 深#FFF→#9B9B9B)、基础动效曲线。
-   单字体 Poppins,配色沿用小站本体(珊瑚橙强调色),亮暗双主题。 */
+/* 公网独立版「备赛小站」:HackCamp 布局(浅色侧边栏 + 顶部大横幅插画 + 卡片仪表盘),
+   数据层 = Firebase(匿名登录 + Firestore 实时同步)。布局比例对照用户提供的参考图。 */
 :root{
-  --bg:#F5F3F7;
-  --surface:#FFFFFF;
-  --surface-2:#FAF8FC;
-  --ink:#2B2433;
-  --ink-soft:#73688A;
-  --line:#E2DCEC;
-  --accent:#F06D5A;
-  --accent-hover:#E25B47;
-  --accent-ink:#FFFFFF;
-  --nav-bg:rgba(255,255,255,.72);
-  --shadow:0 12px 32px rgba(43,36,51,.10);
-  --h-g1:#000000; --h-g2:#666666;
-  --curve:cubic-bezier(.22,1,.36,1);
-  --font:"Poppins",ui-sans-serif,system-ui,"PingFang SC","Noto Sans SC",sans-serif;
+  --bg:#F3EBDA; --surface:#FBF5E7; --surface-2:#F5EEDB;
+  --ink:#43402F; --ink-soft:#8C8671; --bd:#57523D; --line:#E2D9C0;
+  --accent:#F2D894; --accent-ink:#43402F;
+  --green:#6F8544; --green-soft:#DDE3C2;
+  --ok:#5E8C4A; --warn:#B07A14; --bad:#C2452F;
+  --chip:#EDE5CE;
+  --flame:#E07B28; --rare:#3E6FC4; --epic:#7D55C8; --legend:#C49318;
+  --sky:#C9E0E3; --ground:#BCCB8D; --hill:#A8BC77;
+  --wood:#D9A05B; --wood-2:#A97238; --scene-line:#7A6B52; --win:#FFE9A8;
+  --shadow:0 2px 0 rgba(87,82,61,.18);
+  --r:16px; --curve:cubic-bezier(.22,1,.36,1);
+  --font-display:"ZCOOL KuaiLe","Baloo 2",ui-rounded,system-ui,"PingFang SC",sans-serif;
+  --font-num:"Baloo 2",ui-rounded,system-ui,sans-serif;
+  --font-body:"Nunito",ui-sans-serif,system-ui,"PingFang SC","Noto Sans SC",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --dot:#E6DABF;
+  color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#181818; --surface:#1F1F1F; --surface-2:#272727;
-    --ink:#EEE9F4; --ink-soft:#A598BE; --line:#383046;
-    --accent:#FF8A76; --accent-hover:#FF9D8C; --accent-ink:#2B130D;
-    --nav-bg:rgba(31,31,31,.72);
-    --shadow:0 12px 32px rgba(0,0,0,.45);
-    --h-g1:#FFFFFF; --h-g2:#9B9B9B;
+  :root{
+    --bg:#262318; --surface:#2F2B1D; --surface-2:#2A261A;
+    --ink:#EFE8D3; --ink-soft:#A49C83; --bd:#8F8768; --line:#423D2A;
+    --accent:#E3C476; --accent-ink:#2B2715;
+    --green:#93A862; --green-soft:#3C4228;
+    --ok:#7FBF68; --warn:#E0B254; --bad:#F0796C;
+    --chip:#38331F;
+    --rare:#7AA7F0; --epic:#A98BF0; --legend:#E6C45C;
+    --sky:#17222E; --ground:#2A3320; --hill:#222B1A; --scene-line:#574D38; --win:#FFD27A;
+    --shadow:0 2px 0 rgba(0,0,0,.4);
+    --dot:#2B2416;
     color-scheme:dark;
   }
 }
-:root[data-theme="dark"]{
-  --bg:#181818; --surface:#1F1F1F; --surface-2:#272727;
-  --ink:#EEE9F4; --ink-soft:#A598BE; --line:#383046;
-  --accent:#FF8A76; --accent-hover:#FF9D8C; --accent-ink:#2B130D;
-  --nav-bg:rgba(31,31,31,.72);
-  --h-g1:#FFFFFF; --h-g2:#9B9B9B;
-  color-scheme:dark;
-}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{
   background:var(--bg); color:var(--ink);
-  font-family:var(--font); font-size:16px; line-height:1.5;
+  background-image:radial-gradient(var(--dot) 1.5px,transparent 1.5px);
+  background-size:20px 20px;
+  font-family:var(--font-body); font-size:15px; line-height:1.55;
   margin:0;
-  padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:0 0;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom,0px));
 }
-
-/* ---- 文本样式(B1 命名样式) ---- */
-.heading-1{font-size:36px;line-height:40px;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
-@media (min-width:720px){.heading-1{font-size:60px;line-height:60px}}
-.heading-3{font-size:30px;line-height:36px;font-weight:600;text-wrap:balance;margin:0}
-@media (min-width:720px){.heading-3{font-size:36px;line-height:40px}}
-.title-1{font-size:20px;line-height:28px;font-weight:500;margin:0}
-.title-3{font-size:16px;line-height:24px;font-weight:500;margin:0}
-.title-4{font-size:14px;line-height:20px;font-weight:500;margin:0}
-.body-2{font-size:16px;line-height:24px;font-weight:500;margin:0;text-wrap:pretty}
-.body-3{font-size:16px;line-height:24px;font-weight:400;margin:0;text-wrap:pretty}
-.body-6{font-size:14px;line-height:20px;font-weight:400;margin:0;text-wrap:pretty}
-.button-md{font-size:16px;line-height:24px;font-weight:600}
-.button-sm{font-size:14px;line-height:20px;font-weight:600}
-.caption-1{font-size:14px;line-height:20px;font-weight:500;margin:0}
-.caption-3{font-size:12px;line-height:16px;font-weight:600;margin:0;letter-spacing:.08em;text-transform:uppercase}
-.caption-5{font-size:12px;line-height:16px;font-weight:400;margin:0}
-.muted{color:var(--ink-soft)}
-
-.skip{position:absolute;left:-9999px;top:0;background:var(--accent);color:var(--accent-ink);padding:8px 12px;border-radius:8px;z-index:99}
-.skip:focus{left:16px;top:calc(env(safe-area-inset-top,0px) + 16px)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-/* ---- 悬浮导航 ---- */
-nav.bar{
-  position:fixed;left:50%;transform:translateX(-50%);
-  top:calc(env(safe-area-inset-top,0px) + 12px);
-  display:flex;align-items:center;gap:16px;
-  padding:8px 16px;border-radius:9999px;
-  background:var(--nav-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border:1px solid var(--line);z-index:50;max-width:calc(100% - 32px);
-}
-nav.bar .logo{color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px;white-space:nowrap}
-nav.bar .logo svg{color:var(--accent)}
-nav.bar a.nl{color:var(--ink-soft);text-decoration:none;white-space:nowrap;transition:color .3s var(--curve)}
-nav.bar a.nl:hover{color:var(--ink)}
-
-/* ---- 按钮 ---- */
-.btn{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:8px 12px;border-radius:8px;border:1px solid var(--accent);
-  background:var(--accent);color:var(--accent-ink);text-decoration:none;cursor:pointer;
-  transition:background-color .3s var(--curve),transform .3s var(--curve);
-}
-.btn:hover{background:var(--accent-hover);border-color:var(--accent-hover);transform:translateY(-1px)}
-.btn:active{transform:scale(.98)}
-.btn svg{transition:transform .3s var(--curve)}
-.btn:hover svg{transform:translate(2px,-2px)}
-.nav-cta{padding:4px 12px;border-radius:9999px}
-
-/* ---- 版面 ---- */
-.wrap{max-width:1040px;margin:0 auto}
-section{padding-block:80px;scroll-margin-top:96px}
-header.hero{padding-block:96px 80px;text-align:center}
-.hero-inner{max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:24px}
-.hero-h{
-  background:linear-gradient(90deg,var(--h-g1),var(--h-g2));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
-.eyebrow{color:var(--accent)}
-.sec-head{display:flex;flex-direction:column;gap:12px;margin-bottom:40px;max-width:680px}
-
-/* ---- hero 小插画:迷你看板 ---- */
-.mini{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:16px;text-align:left}
-.mini .mrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.mini .cd{display:flex;gap:4px}
-.mini .cd b{font-weight:600;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-variant-numeric:tabular-nums}
-.mini .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.mini .mcol{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.mini .chip{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mini .chip.done{color:var(--ink-soft);text-decoration:line-through}
-.mini .dot{display:inline-block;width:8px;height:8px;border-radius:9999px;background:var(--accent);margin-right:4px}
-.mini .pb{flex:1;height:8px;border-radius:9999px;background:var(--bg);border:1px solid var(--line);overflow:hidden;min-width:80px}
-.mini .pb i{display:block;height:100%;width:40%;background:var(--accent);border-radius:9999px}
-.mini .av{display:flex}
-.mini .av b{width:20px;height:20px;border-radius:9999px;border:2px solid var(--surface);background:var(--accent);display:block}
-.mini .av b+b{margin-left:-6px;background:#7A6AE6}
-
-/* ---- 卡片 ---- */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;min-width:0;transition:transform .5s var(--curve),box-shadow .5s var(--curve)}
-.card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-@media (max-width:760px){.grid-3{grid-template-columns:minmax(0,1fr)}}
-.pain{display:flex;gap:12px;align-items:flex-start;padding:16px}
-.pain .x{color:var(--accent);flex:none;margin-top:2px}
-.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-@media (max-width:760px){.grid-2{grid-template-columns:minmax(0,1fr)}}
-.bene{display:flex;flex-direction:column;gap:12px}
-.bene .ic{width:40px;height:40px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--accent)}
-
-/* ---- FAQ ---- */
-.qa{display:flex;flex-direction:column;gap:12px;max-width:680px}
-details.q{background:var(--surface);border:1px solid var(--line);border-radius:16px}
-details.q summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px 24px;border-radius:16px;transition:background-color .3s var(--curve)}
-details.q summary::-webkit-details-marker{display:none}
-details.q summary:hover{background:var(--surface-2)}
-details.q .plus{flex:none;width:16px;height:16px;position:relative;transition:transform .5s var(--curve)}
-details.q .plus::before,details.q .plus::after{content:"";position:absolute;background:var(--accent);border-radius:2px}
-details.q .plus::before{left:7px;top:0;width:2px;height:16px}
-details.q .plus::after{left:0;top:7px;width:16px;height:2px}
-details.q[open] .plus{transform:rotate(135deg)}
-details.q .ans{padding:0 24px 16px;display:flex;flex-direction:column;gap:12px}
-details.q[open] .ans{animation:ansin .5s var(--curve)}
-@keyframes ansin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-
-/* ---- 步骤 ---- */
-.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-@media (max-width:760px){.steps{grid-template-columns:minmax(0,1fr)}}
-.step{display:flex;flex-direction:column;gap:12px}
-.step .no{width:40px;height:40px;border-radius:9999px;border:1px solid var(--line);background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:600}
-
-/* ---- 标语逐词点亮 ---- */
-.tagline{padding-block:96px;display:flex;justify-content:center}
-.tagline .tl{max-width:680px;text-align:center}
-.tl .w{display:inline-block;transition:opacity .5s var(--curve)}
-.tl .w.dim{opacity:.3}
-
-/* ---- 滚动显现(JS 才会加 .pre,静态帧完整) ---- */
-.pre{opacity:0;transform:translateY(32px)}
-.pre.on{opacity:1;transform:none;transition:opacity .7s var(--curve),transform .7s var(--curve)}
-@media (prefers-reduced-motion:reduce){
-  .pre{opacity:1;transform:none}
-  .tl .w.dim{opacity:1}
-  .btn:hover{transform:none}
-  .btn:hover svg{transform:none}
-  .card:hover{transform:none;box-shadow:none}
-  details.q[open] .ans{animation:none}
-}
-
-footer{border-top:1px solid var(--line);padding-block:40px 48px;margin-top:80px}
-footer .frow{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between}
-.foot-dis{color:var(--ink-soft);opacity:.55;cursor:not-allowed}
-.flink{color:var(--ink-soft);text-decoration:none;transition:color .3s var(--curve)}
-.flink:hover{color:var(--ink)}
+button{font:inherit;cursor:pointer}
+input,textarea,select{font:inherit;color:var(--ink)}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+[hidden]{display:none!important}
 img,svg{max-width:100%}
+
+/* ---- 布局:浅色侧边栏 + 主区(比例对照参考图) ---- */
+.layout{display:flex;align-items:stretch;min-height:100vh;gap:0}
+.side{
+  flex:none;width:200px;color:var(--ink);
+  padding:calc(24px + env(safe-area-inset-top,0px)) 18px 16px max(18px,env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;gap:6px;
+  position:sticky;top:0;height:100vh;
+}
+.side .logo{display:flex;flex-direction:column;gap:2px;margin-bottom:22px;font-family:var(--font-display)}
+.side .logo .lg-top{display:flex;align-items:center;gap:8px;font-size:21px}
+.side .logo .lg-sub{font-size:13px;color:var(--ink-soft)}
+.side nav{display:flex;flex-direction:column;gap:8px}
+.side a.nv{
+  display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;
+  font-family:var(--font-display);font-size:17px;padding:8px 14px;border-radius:12px;
+  border:2px solid transparent;opacity:.85;
+  transition:background-color .3s var(--curve),opacity .3s var(--curve);
+}
+.side a.nv:hover{opacity:1;background:var(--surface)}
+.side a.nv.on{background:var(--accent);border-color:var(--bd);opacity:1}
+.side .trees{margin-top:auto;opacity:.9}
+.main{flex:1;min-width:0;padding-left:12px;padding-right:4px;max-width:1240px;padding-top:env(safe-area-inset-top,0px)}
+@media (max-width:860px){
+  .layout{flex-direction:column}
+  .side{position:static;height:auto;width:100%;flex-direction:row;align-items:center;gap:4px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));overflow-x:auto}
+  .side .logo{margin:0 10px 0 0}
+  .side .logo .lg-sub{display:none}
+  .side nav{flex-direction:row;gap:4px}
+  .side a.nv{font-size:15px;padding:6px 10px;white-space:nowrap}
+  .side .trees{display:none}
+  .main{padding-left:16px}
+}
+
+/* ---- 手绘卡片 ---- */
+.card{background:var(--surface);border:2px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;min-width:0}
+.card:nth-of-type(2n){border-radius:18px 14px 17px 15px}
+.card:nth-of-type(3n){border-radius:14px 18px 15px 17px}
+.card h2{margin:0 0 10px;font-family:var(--font-display);font-size:19px;font-weight:400;display:flex;align-items:baseline;gap:8px}
+.card h2 .cnt{font-family:var(--font-num);font-size:13px;color:var(--ink-soft)}
+.card h2 .right{margin-left:auto;font-family:var(--font-num);font-size:15px;color:var(--ink-soft)}
+
+/* ---- hero:左标题 / 右大横幅插画(约 0.9 : 1.5) ---- */
+.hero{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.5fr);gap:16px;align-items:center;padding-block:10px 16px}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr)}}
+.hero .tt{display:flex;flex-direction:column;gap:6px}
+.hero h1{font-family:var(--font-display);font-weight:400;font-size:clamp(32px,4.8vw,50px);line-height:1.08;margin:0}
+.hero .squig{color:var(--green)}
+.hero .sub{color:var(--ink-soft);margin:0;font-size:14px;font-family:var(--font-display)}
+.scene{border-radius:16px;overflow:hidden;background:var(--sky)}
+.scene svg{width:100%;height:auto;display:block}
+.scene .ghost{opacity:.28;filter:grayscale(1)}
+.night-only{display:none}
+@media (prefers-color-scheme: dark){.night-only{display:initial}.day-only{display:none}}
+.scene .cl-a{animation:drift-a 26s ease-in-out infinite alternate}
+.scene .cl-b{animation:drift-b 36s ease-in-out infinite alternate}
+@keyframes drift-a{from{transform:translateX(-45px)}to{transform:translateX(65px)}}
+@keyframes drift-b{from{transform:translateX(45px)}to{transform:translateX(-60px)}}
+.scene .flame-g{transform-box:fill-box;transform-origin:50% 100%;animation:flick 1s ease-in-out infinite alternate}
+@keyframes flick{from{transform:scaleY(1) scaleX(1)}to{transform:scaleY(.88) scaleX(1.07)}}
+.scene .flame-in{transform-box:fill-box;transform-origin:50% 100%;animation:flick-in .7s ease-in-out infinite alternate}
+@keyframes flick-in{from{transform:scaleY(1)}to{transform:scaleY(.72)}}
+.scene .sm-a{animation:rise 3.2s linear infinite}
+.scene .sm-b{animation:rise 4.3s linear infinite;animation-delay:1.2s}
+@keyframes rise{0%{transform:translateY(0);opacity:.7}80%{opacity:.25}100%{transform:translateY(-22px);opacity:0}}
+.scene .star{animation:tw 2.8s ease-in-out infinite alternate}
+.scene .star:nth-of-type(2n){animation-delay:1.1s}
+.scene .star:nth-of-type(3n){animation-delay:1.9s}
+@keyframes tw{from{opacity:1}to{opacity:.25}}
+
+/* ---- 比赛切换 ---- */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.tab{border:2px solid var(--bd);background:var(--surface);color:var(--ink-soft);border-radius:99px;padding:4px 14px;font-family:var(--font-display);font-size:15px}
+.tab[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tab-add{border:2px dashed var(--bd);background:none;color:var(--ink-soft);border-radius:99px;padding:4px 12px}
+.tab-add:hover{color:var(--ink)}
+
+/* ---- 行网格(比例对照参考图) ---- */
+.row1{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.05fr);gap:16px;align-items:stretch}
+.row2{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);gap:16px;align-items:stretch;margin-top:16px}
+.row3{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:stretch;margin-top:16px}
+.row-sch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;margin-top:16px}
+@media (max-width:980px){.row1,.row2,.row3,.row-sch{grid-template-columns:minmax(0,1fr)}}
+
+.tag{display:inline-block;background:var(--accent);color:var(--accent-ink);border:1.5px solid var(--bd);border-radius:8px;padding:1px 10px;font-family:var(--font-display);font-size:13px}
+.next-name{font-family:var(--font-display);font-size:clamp(22px,2.6vw,30px);line-height:1.2;margin:8px 0 6px;overflow-wrap:anywhere}
+.next-name a{color:var(--ink);text-decoration:none}
+.next-name a:hover{color:var(--green)}
+.next-meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--ink-soft);font-size:13px;margin:0}
+.next-meta .mono{font-family:var(--font-mono)}
+#event-goal{color:var(--ink-soft);font-size:13px;margin:8px 0 0}
+
+.countdown{display:flex;gap:10px;flex-wrap:wrap}
+.cd-tile{background:var(--surface-2);border:2px solid var(--bd);border-radius:12px;padding:8px 4px 6px;min-width:62px;flex:1;max-width:88px;text-align:center}
+.cd-num{font-family:var(--font-num);font-weight:700;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.cd-lbl{font-size:12px;color:var(--ink-soft)}
+.countdown.urgent .cd-num,.cd-over .cd-num{color:var(--bad)}
+.cd-empty{color:var(--ink-soft);font-size:13px;align-self:center}
+
+#team{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.mate{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.mate .pv{background:var(--sky);border:2px solid var(--bd);border-radius:12px;padding:5px 7px 0;display:flex;align-items:flex-end}
+.mate .nm{font-family:var(--font-display);font-size:16px;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mate .tl{font-size:11px;color:var(--ink-soft)}
+.mate .m-chart{display:flex;align-items:flex-end;gap:1px;height:20px;width:80px}
+.mate .m-chart i{flex:1;background:var(--green);border-radius:1px;min-height:2px}
+.presence-line{margin:10px 0 0;font-size:12px;color:var(--ink-soft)}
+
+.pg-bar{height:14px;border:2px solid var(--bd);border-radius:99px;background:var(--surface-2);overflow:hidden;margin:4px 0 16px}
+.pg-bar i{display:block;height:100%;width:0;background:var(--green);border-radius:99px;transition:width .5s var(--curve)}
+#stage-row{display:flex;flex-wrap:wrap;gap:4px 0;align-items:flex-start}
+.stage{flex:1;min-width:76px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;background:none;border:none;padding:6px 2px;border-radius:12px;color:var(--ink);transition:background-color .3s var(--curve)}
+.stage:not(:first-child)::before{content:"";position:absolute;left:-50%;top:22px;width:100%;height:2px;background:var(--bd);opacity:.35;z-index:0}
+.stage .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:2px solid var(--bd);position:relative;z-index:1}
+.stage.done .ic{background:var(--green-soft)}
+.stage.done .ic::after{content:"✓";position:absolute;right:-6px;bottom:-6px;width:16px;height:16px;border-radius:50%;background:var(--ok);color:#fff;font-size:11px;line-height:16px;text-align:center}
+.stage.cur{background:var(--accent)}
+.stage.cur .ic{background:var(--surface)}
+.stage .lb{font-family:var(--font-display);font-size:13px;white-space:nowrap}
+.stage:disabled{cursor:default}
+.lv-line{margin:12px 0 0;font-size:12px;color:var(--ink-soft)}
+#cheer{margin:4px 0 0;font-family:var(--font-display);font-size:13px;color:var(--warn)}
+
+#check-list{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:6px}
+#check-list li{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 8px;border-radius:8px}
+#check-list li.ck-done{background:var(--green-soft)}
+#check-list input[type=checkbox]{width:18px;height:18px;accent-color:var(--ok);flex:none;margin:0}
+#check-list .txt{flex:1;overflow-wrap:anywhere}
+#check-list li.ck-done .txt{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:var(--line)}
+
+#note-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+.note{border:2px solid var(--bd);border-radius:12px;padding:8px;min-width:0;background:#CFE3EF}
+.note:nth-child(3n+2){background:#F2D7C8}
+.note:nth-child(3n){background:#DDE5C4}
+@media (prefers-color-scheme: dark){
+  .note{background:#2E3A42}
+  .note:nth-child(3n+2){background:#45332B}
+  .note:nth-child(3n){background:#333C26}
+}
+.note textarea{width:100%;border:none;background:none;resize:vertical;min-height:72px;padding:2px;line-height:1.5;color:var(--ink)}
+.note textarea:focus{outline:none}
+.note .n-foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink-soft);gap:6px}
+.note .like{border:none;background:none;color:var(--bad);font-size:12px;padding:2px 6px;border-radius:8px}
+.note .like:hover{background:rgba(255,255,255,.4)}
+
+#link-list{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:2px}
+#link-list li{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 4px;border-bottom:1.5px dashed var(--line)}
+#link-list .fold{flex:none;color:var(--ink-soft)}
+#link-list a{color:var(--ink);font-weight:700;text-decoration:none;overflow-wrap:anywhere;flex:1;min-width:0}
+#link-list a:hover{color:var(--green)}
+#link-list .arrow{color:var(--green);flex:none}
+#link-list .by{font-size:11px;color:var(--ink-soft);white-space:nowrap}
+.link-form{display:flex;flex-direction:column;gap:6px}
+.link-form input{border:2px solid var(--bd);background:var(--surface-2);border-radius:10px;padding:7px 10px;min-width:0}
+.link-form .row2{display:flex;gap:6px}
+.link-form .row2 input{flex:1}
+
+.sec-title{font-family:var(--font-display);font-size:22px;margin:26px 0 12px;display:flex;align-items:baseline;gap:10px}
+.sec-title .cnt{font-family:var(--font-num);font-size:13px;color:var(--ink-soft)}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.board{grid-template-columns:minmax(0,1fr)}}
+.col{background:var(--surface);border:2px solid var(--bd);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0;transition:border-color .3s var(--curve)}
+.col.drop{border-color:var(--green)}
+.col h2{margin:0;font-family:var(--font-display);font-size:16px;font-weight:400;display:flex;align-items:center;gap:8px}
+.col h2 .dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--bd)}
+.col[data-status="todo"] .dot{background:var(--surface-2)}
+.col[data-status="doing"] .dot{background:var(--accent)}
+.col[data-status="done"] .dot{background:var(--green)}
+.col h2 .cnt{font-family:var(--font-num);color:var(--ink-soft);font-size:13px}
+.cards{display:flex;flex-direction:column;gap:8px;min-height:24px}
+.task{background:var(--surface-2);border:2px solid var(--bd);border-left-width:5px;border-radius:12px;padding:10px 12px;cursor:pointer;transition:transform .3s var(--curve)}
+.task:hover{transform:translateY(-2px)}
+.task.dragging{opacity:.5}
+.task.r-rare{border-left-color:var(--rare)}
+.task.r-epic{border-left-color:var(--epic)}
+.task.r-legend{border-left-color:var(--legend)}
+.task .t-title{margin:0 0 8px;font-weight:700;overflow-wrap:anywhere}
+.col[data-status="done"] .t-title{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:var(--line)}
+.t-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{font-size:11px;border-radius:99px;padding:1px 8px;border:1.5px solid var(--line);color:var(--ink-soft);white-space:nowrap}
+.chip.c-rare{color:var(--rare);border-color:var(--rare)}
+.chip.c-epic{color:var(--epic);border-color:var(--epic)}
+.chip.c-legend{color:var(--legend);border-color:var(--legend)}
+.chip.c-due-warn{color:var(--warn);border-color:var(--warn)}
+.chip.c-due-bad{color:var(--bad);border-color:var(--bad)}
+.t-foot{display:flex;align-items:center;gap:6px}
+.assignee{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--bd);background:var(--chip);border-radius:99px;padding:2px 10px 2px 3px;font-size:12px;max-width:100%}
+.assignee img{width:20px;height:20px;border-radius:50%;display:block}
+.assignee .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:9em}
+.assignee.unset{padding:2px 10px;color:var(--ink-soft)}
+.t-foot .spacer{flex:1}
+.add-form{display:flex;gap:6px}
+.add-form input{flex:1;min-width:0;border:2px solid var(--bd);background:var(--surface);border-radius:10px;padding:7px 10px}
+.empty{color:var(--ink-soft);font-size:13px;border:2px dashed var(--line);border-radius:12px;padding:14px;text-align:center}
+
+#ms-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+#ms-list li{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 8px;border-radius:8px}
+#ms-list li.next{background:var(--accent)}
+.ms-dot{flex:none;width:10px;height:10px;border-radius:50%;border:2px solid var(--ink-soft);background:none}
+li.past .ms-dot{background:var(--green);border-color:var(--green)}
+li.next .ms-dot{border-color:var(--bd);background:var(--bd)}
+.ms-date{font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+li.next .ms-date,li.next .ms-label{color:var(--accent-ink)}
+.ms-label{flex:1;min-width:0;overflow-wrap:anywhere}
+li.past .ms-label{color:var(--ink-soft)}
+.ms-left{font-size:12px;color:var(--accent-ink);font-weight:700;white-space:nowrap}
+.ms-form{display:flex;gap:6px;flex-wrap:wrap}
+.ms-form input{border:2px solid var(--bd);background:var(--surface-2);border-radius:10px;padding:7px 10px;min-width:0}
+.ms-form input[type="text"]{flex:1;min-width:120px}
+#lifemap{display:grid;grid-template-columns:repeat(auto-fill,minmax(14px,1fr));gap:4px;margin-bottom:8px}
+#lifemap .cell{aspect-ratio:1;border-radius:3px;background:var(--chip)}
+#lifemap .cell.past{background:var(--green)}
+#lifemap .cell.today{background:var(--flame)}
+#lifemap .cell.ms{box-shadow:inset 0 0 0 2px var(--legend)}
+.map-legend{font-size:11px;color:var(--ink-soft);margin:0}
+#log-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto}
+#log-list li{display:flex;gap:10px;align-items:baseline;font-size:13px;min-width:0}
+#log-list .ms-date{color:var(--flame);font-weight:600}
+#log-list .lg-text{flex:1;min-width:0;overflow-wrap:anywhere}
+
+.btn{border:2px solid var(--bd);background:var(--surface);color:var(--ink);border-radius:10px;padding:6px 14px;font-family:var(--font-display);font-size:14px;transition:transform .3s var(--curve),background-color .3s var(--curve)}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:scale(.97)}
+.btn-accent{background:var(--accent);color:var(--accent-ink)}
+.btn-ghost{border:none;background:none;color:var(--ink-soft);padding:4px 6px;border-radius:8px}
+.btn-ghost:hover{background:var(--chip);color:var(--ink)}
+.btn-danger{color:var(--bad)}
+.banner{background:var(--surface);border:2px solid var(--warn);border-radius:var(--r);padding:12px 16px;margin:12px 0}
+#name-card{background:var(--surface);border:2px solid var(--green);border-radius:var(--r);padding:14px 16px;margin:12px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#name-card input{border:2px solid var(--bd);background:var(--surface-2);border-radius:10px;padding:7px 10px;flex:1;min-width:160px}
+#settings-panel{background:var(--surface);border:2px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin:0 0 16px}
+#settings-panel h2{margin:0 0 12px;font-family:var(--font-display);font-size:18px;font-weight:400}
+.field-row{display:flex;flex-wrap:wrap;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px}
+.field label{font-size:12px;color:var(--ink-soft);font-weight:700}
+.field input,.field select,.field textarea{border:2px solid var(--bd);background:var(--surface-2);border-radius:10px;padding:8px 10px}
+.panel-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.panel-actions .grow{flex:1}
+
+#detail-overlay{position:fixed;inset:0;background:rgba(40,36,24,.5);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+#detail{background:var(--surface);border:2px solid var(--bd);border-radius:var(--r);padding:18px;width:min(480px,100%);max-height:85vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
+#detail h2{margin:0;font-family:var(--font-display);font-size:18px;font-weight:400}
+#popover{position:absolute;z-index:70;background:var(--surface);border:2px solid var(--bd);border-radius:12px;box-shadow:var(--shadow);padding:10px;width:240px}
+#popover input{width:100%;border:2px solid var(--bd);background:var(--surface-2);border-radius:10px;padding:6px 10px;margin-bottom:8px}
+#assignee-results{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto}
+#assignee-results button{display:flex;align-items:center;gap:8px;border:none;background:none;border-radius:8px;padding:6px 8px;text-align:left;width:100%}
+#assignee-results button:hover{background:var(--chip)}
+#assignee-results img{width:22px;height:22px;border-radius:50%}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:13px;z-index:90}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:80}
+body.readonly .write-only{display:none!important}
+@media (prefers-reduced-motion:reduce){
+  .task:hover{transform:none}
+  .btn:active{transform:none}
+  .pg-bar i{transition:none}
+  .scene .cl-a,.scene .cl-b,.scene .flame-g,.scene .flame-in,.scene .sm-a,.scene .sm-b,.scene .star{animation:none}
+}
 </style>
+</head>
+<body>
 
-<a class="skip button-sm" href="#main">跳到正文</a>
+<div class="layout">
+<aside class="side">
+  <div class="logo">
+    <span class="lg-top">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20L12 5l9 15M8.5 20L12 13l3.5 7"/></svg>
+      备赛小站
+    </span>
+    <span class="lg-sub">双人营地</span>
+  </div>
+  <nav>
+    <a class="nv on" href="#top" aria-current="page"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/></svg>首页</a>
+    <a class="nv" href="#tasks"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.5 2.5 5-5"/></svg>任务</a>
+    <a class="nv" href="#ideas"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 3.5 10.9c-.9.7-1.5 1.2-1.5 2.1h-4c0-.9-.6-1.4-1.5-2.1A6 6 0 0 1 12 3z"/></svg>想法库</a>
+    <a class="nv" href="#res"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 17l8 4 8-4"/></svg>资料</a>
+    <a class="nv" href="#schedule"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>日程</a>
+  </nav>
+  <svg class="trees" width="140" height="110" viewBox="0 0 140 110" shape-rendering="crispEdges" aria-hidden="true">
+    <g fill="#6F8544">
+      <rect x="24" y="12" width="12" height="12"/><rect x="18" y="24" width="24" height="12"/><rect x="12" y="36" width="36" height="12"/><rect x="6" y="48" width="48" height="14"/>
+      <rect x="84" y="30" width="10" height="10"/><rect x="79" y="40" width="20" height="10"/><rect x="74" y="50" width="30" height="12"/>
+    </g>
+    <rect x="27" y="62" width="7" height="12" fill="#A97238"/>
+    <rect x="86" y="62" width="6" height="10" fill="#A97238"/>
+    <g fill="#8C9A6A"><rect x="55" y="80" width="14" height="10"/><rect x="108" y="86" width="16" height="10"/><rect x="36" y="88" width="10" height="8"/></g>
+  </svg>
+</aside>
 
-<nav class="bar" aria-label="页面导航">
-  <a class="logo title-4" href="#top" aria-current="page">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 8v8M12 8v5M16 8v8"/></svg>
-    备赛小站
-  </a>
-  <a class="nl title-4" href="#feat">功能</a>
-  <a class="nl title-4" href="#how">流程</a>
-  <a class="nl title-4" href="#faq">问答</a>
-  <a class="btn button-sm nav-cta" href="https://claude.ai/artifact/Aak4QiqvzHVszJPk5Fw3SE" target="_blank" rel="noopener noreferrer">打开小站</a>
-</nav>
+<div class="main">
+  <header class="hero" id="top">
+    <div class="tt">
+      <h1>备赛小站 <svg class="squig" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" aria-hidden="true"><path d="M5 20L12 7l7 13M9.5 20L12 15l2.5 5M12 7V4"/></svg></h1>
+      <svg class="squig" width="150" height="10" viewBox="0 0 150 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M3 6 C 22 1, 38 9, 56 5 S 100 2, 147 6"/></svg>
+      <p class="sub">双人 Hackathon 备赛空间</p>
+    </div>
+    <div class="scene" role="img" aria-label="你们的像素营地,随完成任务数升级">
+      <svg viewBox="0 0 480 220" shape-rendering="crispEdges">
+        <rect width="480" height="220" fill="var(--sky)"/>
+        <g class="day-only">
+          <rect x="412" y="24" width="26" height="26" fill="var(--legend)"/>
+          <rect x="406" y="30" width="38" height="14" fill="var(--legend)"/>
+          <rect x="418" y="18" width="14" height="38" fill="var(--legend)"/>
+          <g class="cl-a">
+            <rect x="60" y="45" width="50" height="10" fill="var(--surface)" opacity=".85"/>
+            <rect x="75" y="35" width="30" height="10" fill="var(--surface)" opacity=".85"/>
+          </g>
+          <g class="cl-b">
+            <rect x="250" y="30" width="45" height="10" fill="var(--surface)" opacity=".7"/>
+            <rect x="262" y="22" width="24" height="8" fill="var(--surface)" opacity=".7"/>
+          </g>
+        </g>
+        <g class="night-only" fill="var(--win)">
+          <rect x="412" y="24" width="26" height="26"/>
+          <rect x="406" y="24" width="12" height="26" fill="var(--sky)"/>
+          <rect class="star" x="70" y="40" width="4" height="4"/><rect class="star" x="150" y="60" width="3" height="3"/><rect class="star" x="230" y="30" width="4" height="4"/><rect class="star" x="320" y="55" width="3" height="3"/><rect class="star" x="40" y="80" width="3" height="3"/><rect class="star" x="275" y="75" width="3" height="3"/>
+        </g>
+        <rect y="150" width="480" height="30" fill="var(--hill)"/>
+        <rect y="180" width="480" height="40" fill="var(--ground)"/>
+        <rect x="35" y="190" width="5" height="5" fill="var(--hill)"/>
+        <rect x="455" y="200" width="5" height="5" fill="var(--hill)"/>
+        <rect x="160" y="205" width="5" height="5" fill="var(--hill)"/>
+        <g id="lv8">
+          <rect x="18" y="132" width="50" height="18" fill="var(--surface)"/>
+          <rect x="23" y="120" width="40" height="12" fill="var(--surface)"/>
+          <rect x="28" y="110" width="30" height="10" fill="var(--surface)"/>
+          <rect x="35" y="102" width="16" height="8" fill="var(--surface)"/>
+          <rect x="40" y="98" width="8" height="34" fill="var(--green)"/>
+          <rect x="30" y="138" width="12" height="12" fill="var(--wood-2)"/>
+        </g>
+        <g id="lv6">
+          <rect x="208" y="70" width="5" height="80" fill="var(--scene-line)"/>
+          <rect x="213" y="70" width="35" height="6" fill="var(--flame)"/>
+          <rect x="213" y="76" width="28" height="6" fill="var(--flame)"/>
+          <rect x="213" y="82" width="20" height="6" fill="var(--flame)"/>
+          <rect x="220" y="74" width="6" height="6" fill="var(--win)"/>
+        </g>
+        <g id="lv1">
+          <rect x="95" y="115" width="15" height="10" fill="var(--flame)"/>
+          <rect x="85" y="125" width="35" height="10" fill="var(--flame)"/>
+          <rect x="75" y="135" width="55" height="10" fill="var(--flame)"/>
+          <rect x="68" y="145" width="70" height="10" fill="var(--flame)"/>
+          <rect x="60" y="155" width="85" height="25" fill="var(--flame)"/>
+          <rect x="95" y="150" width="15" height="30" fill="var(--wood-2)"/>
+          <rect x="98" y="105" width="4" height="10" fill="var(--scene-line)"/>
+          <rect x="102" y="105" width="12" height="6" fill="var(--green)"/>
+        </g>
+        <g id="lv2">
+          <rect x="160" y="172" width="45" height="6" fill="var(--wood)"/>
+          <rect x="168" y="166" width="30" height="6" fill="var(--wood)"/>
+          <g class="smoke">
+            <rect class="sm-a" x="181" y="116" width="5" height="5" fill="var(--surface)" opacity=".7"/>
+            <rect class="sm-b" x="189" y="110" width="4" height="4" fill="var(--surface)" opacity=".6"/>
+          </g>
+          <g class="flame-g">
+            <rect x="178" y="128" width="10" height="8" fill="var(--flame)"/>
+            <rect x="173" y="136" width="20" height="10" fill="var(--flame)"/>
+            <rect x="170" y="146" width="26" height="12" fill="var(--flame)"/>
+            <rect x="175" y="158" width="16" height="8" fill="var(--flame)"/>
+            <rect class="flame-in" x="179" y="144" width="8" height="14" fill="var(--win)"/>
+          </g>
+          <rect x="155" y="174" width="6" height="6" fill="var(--scene-line)"/>
+          <rect x="206" y="174" width="6" height="6" fill="var(--scene-line)"/>
+        </g>
+        <g>
+          <rect x="216" y="138" width="22" height="10" fill="#4A3222"/>
+          <rect x="215" y="146" width="4" height="26" fill="#4A3222"/>
+          <rect x="235" y="146" width="4" height="26" fill="#4A3222"/>
+          <rect x="220" y="148" width="14" height="10" fill="#F0CFA6"/>
+          <rect x="223" y="151" width="3" height="3" fill="#2B211A"/>
+          <rect x="229" y="151" width="3" height="3" fill="#2B211A"/>
+          <rect x="220" y="158" width="14" height="10" fill="#6E8F5A"/>
+          <rect x="218" y="168" width="18" height="8" fill="#6E8F5A"/>
+          <rect x="221" y="176" width="4" height="4" fill="#4A3F33"/>
+          <rect x="229" y="176" width="4" height="4" fill="#4A3F33"/>
+          <rect x="246" y="138" width="20" height="10" fill="#2E2620"/>
+          <rect x="245" y="146" width="4" height="8" fill="#2E2620"/>
+          <rect x="263" y="146" width="4" height="8" fill="#2E2620"/>
+          <rect x="249" y="148" width="14" height="10" fill="#F0CFA6"/>
+          <rect x="252" y="151" width="3" height="3" fill="#2B211A"/>
+          <rect x="258" y="151" width="3" height="3" fill="#2B211A"/>
+          <rect x="249" y="158" width="14" height="10" fill="#5A7A9E"/>
+          <rect x="247" y="168" width="18" height="8" fill="#5A7A9E"/>
+          <rect x="250" y="176" width="4" height="4" fill="#4A3F33"/>
+          <rect x="258" y="176" width="4" height="4" fill="#4A3F33"/>
+          <rect x="272" y="168" width="16" height="8" fill="#FFFFFF"/>
+          <rect x="284" y="160" width="10" height="10" fill="#FFFFFF"/>
+          <rect x="284" y="156" width="3" height="4" fill="#FFFFFF"/>
+          <rect x="291" y="156" width="3" height="4" fill="#FFFFFF"/>
+          <rect x="268" y="162" width="4" height="10" fill="#FFFFFF"/>
+          <rect x="287" y="163" width="2" height="2" fill="#3B2A1E"/>
+          <rect x="274" y="176" width="3" height="4" fill="#FFFFFF"/>
+          <rect x="283" y="176" width="3" height="4" fill="#FFFFFF"/>
+        </g>
+        <g id="lv3">
+          <rect x="290" y="140" width="48" height="40" fill="var(--wood)"/>
+          <rect x="285" y="132" width="58" height="8" fill="var(--wood-2)"/>
+          <rect x="295" y="124" width="38" height="8" fill="var(--wood-2)"/>
+          <rect x="305" y="152" width="18" height="28" fill="var(--wood-2)"/>
+        </g>
+        <g id="lv4">
+          <rect x="350" y="125" width="75" height="55" fill="var(--wood)"/>
+          <rect x="342" y="115" width="91" height="10" fill="var(--wood-2)"/>
+          <rect x="354" y="105" width="67" height="10" fill="var(--wood-2)"/>
+          <rect x="368" y="95" width="39" height="10" fill="var(--wood-2)"/>
+          <rect x="400" y="85" width="12" height="20" fill="var(--wood-2)"/>
+          <rect x="358" y="138" width="18" height="16" fill="var(--win)"/>
+          <rect x="365" y="138" width="3" height="16" fill="var(--wood-2)"/>
+          <rect x="358" y="144" width="18" height="3" fill="var(--wood-2)"/>
+          <rect x="392" y="148" width="20" height="32" fill="var(--wood-2)"/>
+          <g class="day-only" fill="var(--surface)"><rect x="404" y="72" width="6" height="6" opacity=".9"/><rect x="412" y="62" width="8" height="8" opacity=".8"/><rect x="422" y="50" width="10" height="10" opacity=".7"/></g>
+        </g>
+        <g id="lv5">
+          <rect x="66" y="192" width="86" height="14" fill="var(--wood)"/>
+          <rect x="66" y="192" width="86" height="3" fill="var(--wood-2)"/>
+          <g fill="var(--green)">
+            <rect x="80" y="178" width="4" height="14"/><rect x="74" y="172" width="8" height="6"/><rect x="84" y="168" width="8" height="6"/>
+            <rect x="106" y="174" width="4" height="18"/><rect x="100" y="168" width="8" height="6"/><rect x="110" y="164" width="8" height="6"/>
+            <rect x="132" y="178" width="4" height="14"/><rect x="126" y="172" width="8" height="6"/><rect x="136" y="168" width="8" height="6"/>
+          </g>
+        </g>
+        <g id="lv7">
+          <rect x="435" y="108" width="6" height="72" fill="var(--wood)"/>
+          <rect x="464" y="108" width="6" height="72" fill="var(--wood)"/>
+          <rect x="435" y="150" width="35" height="5" fill="var(--wood)"/>
+          <rect x="435" y="128" width="35" height="5" fill="var(--wood)"/>
+          <rect x="430" y="86" width="46" height="22" fill="var(--wood)"/>
+          <rect x="426" y="78" width="54" height="8" fill="var(--wood-2)"/>
+          <rect x="438" y="70" width="30" height="8" fill="var(--wood-2)"/>
+        </g>
+      </svg>
+    </div>
+  </header>
 
-<span id="top"></span>
+  <div class="banner" id="banner" hidden></div>
+  <div id="name-card" hidden>
+    <span>👋 第一次来营地,给自己起个名字吧(队友会看到):</span>
+    <input id="in-nickname" maxlength="20" placeholder="例如:Crystal / Xuan">
+    <button class="btn btn-accent" id="btn-save-name" type="button">就叫这个</button>
+  </div>
 
-<header class="hero">
-  <div class="hero-inner">
-    <p class="caption-3 eyebrow">两个人的备赛工作站</p>
-    <h1 class="heading-1 hero-h">比赛的事,<br>放在一个地方</h1>
-    <p class="body-3 muted">倒计时、任务板、提交清单、资源库和便签,全队实时同步。打开同一个链接,谁改了什么,另一个人立刻看见。</p>
-    <a class="btn button-md" href="https://claude.ai/artifact/Aak4QiqvzHVszJPk5Fw3SE" target="_blank" rel="noopener noreferrer">打开备赛小站
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
-    </a>
-    <p class="caption-1 muted">正在服役:CartesianForms 2026 与 Kiroween 2026 双赛道。</p>
-    <div class="mini" role="img" aria-label="小站界面示意:倒计时和三列任务板">
-      <div class="mrow">
-        <span class="title-4"><span class="dot" aria-hidden="true"></span>Kiroween 2026</span>
-        <span class="cd caption-1 muted">还剩 <b id="md">34</b> 天 <b id="mh">07</b> 时 <b id="mm">52</b> 分 <b id="ms">10</b> 秒</span>
+  <div class="tabs" id="tabs">
+    <button class="tab-add write-only" id="btn-add-event" type="button">+ 添加比赛</button>
+  </div>
+
+  <section id="settings-panel" hidden>
+    <h2>比赛信息</h2>
+    <div class="field-row">
+      <div class="field"><label for="in-name">比赛名称</label><input id="in-name" placeholder="例如:Kiroween 2026"></div>
+      <div class="field"><label for="in-goal">一句话目标</label><input id="in-goal" placeholder="例如:做出可演示的 MVP"></div>
+      <div class="field"><label for="in-deadline">提交截止时间</label><input id="in-deadline" type="datetime-local"></div>
+      <div class="field"><label for="in-link">官网 / 提交入口</label><input id="in-link" type="url" placeholder="https://…"></div>
+      <div class="field"><label for="in-participants">参赛人数(手动更新)</label><input id="in-participants" type="number" min="0" placeholder="官网查到就填"></div>
+      <div class="field"><label for="in-prize">奖金池</label><input id="in-prize" placeholder="例如:总奖金 $100,000"></div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn btn-accent" id="btn-save-settings">保存</button>
+      <button class="btn" id="btn-cancel-settings">取消</button>
+      <span class="grow"></span>
+      <button class="btn btn-danger" id="btn-delete-event">删除这个比赛</button>
+    </div>
+  </section>
+
+  <section class="row1" aria-label="比赛概览">
+    <div class="card">
+      <span class="tag">下一场比赛</span>
+      <p class="next-name"><a id="event-name-link" href="#" target="_blank" rel="noopener noreferrer"><span id="event-name">还没有比赛</span> <span id="event-arrow" hidden>↗</span></a></p>
+      <p class="next-meta"><span class="mono" id="event-date">— —</span><span id="st-prize">奖金待填</span><span id="st-participants" hidden></span></p>
+      <p id="event-goal">点上面的「+ 添加比赛」,把你们在打的比赛放进来。</p>
+      <div class="panel-actions" style="margin-top:10px">
+        <button class="btn write-only" id="btn-settings">比赛设置</button>
+        <button class="btn write-only" id="btn-seed" hidden>一键导入两场比赛</button>
       </div>
-      <div class="cols caption-5">
-        <div class="mcol"><span class="caption-3 muted">待办</span><span class="chip">录 demo 视频</span><span class="chip">写使用说明</span></div>
-        <div class="mcol"><span class="caption-3 muted">进行中</span><span class="chip">问题推导引擎</span></div>
-        <div class="mcol"><span class="caption-3 muted">完成</span><span class="chip done">选赛道</span><span class="chip done">建仓库</span></div>
+    </div>
+    <div class="card">
+      <h2>提交截止还有</h2>
+      <div class="countdown" id="countdown"><div class="cd-empty">未设置截止时间</div></div>
+    </div>
+    <div class="card">
+      <h2>我们的队伍</h2>
+      <div id="team"></div>
+      <div class="empty" id="team-empty" style="padding:8px">起好名字、认领任务,队伍卡就会立起来。</div>
+      <p class="presence-line" id="presence">正在连接营地…</p>
+    </div>
+  </section>
+
+  <section class="row2" aria-label="进度与清单">
+    <div class="card">
+      <h2>备赛进度 <span class="cnt" id="lv-badge"></span><span class="right" id="stage-cnt">0 / 6</span></h2>
+      <div class="pg-bar"><i id="pg-bar"></i></div>
+      <div id="stage-row"></div>
+      <p class="lv-line" id="lv-next">完成任务就是给营地添砖,哪个比赛的都算。</p>
+      <p id="cheer"></p>
+    </div>
+    <div class="card">
+      <h2>提交清单 <span class="cnt" id="check-cnt"></span></h2>
+      <ul id="check-list"></ul>
+      <div class="empty" id="checks-empty">把官方提交要求放进来,交之前逐项打勾。</div>
+      <form class="link-form write-only" id="check-form">
+        <div class="row2">
+          <input id="in-check-text" placeholder="新清单项…" maxlength="200" required>
+          <button class="btn" type="submit">添加</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="row3" aria-label="想法与资料">
+    <div class="card" id="ideas">
+      <h2>想法库 <span class="cnt" id="notes-cnt"></span><button class="btn write-only right" id="btn-add-note" type="button" style="margin-left:auto">+ 新想法</button></h2>
+      <div id="note-grid"></div>
+      <div class="empty" id="notes-empty">点子、分工、灵感碎片,随手丢在这里。</div>
+    </div>
+    <div class="card" id="res">
+      <h2>资源速览 <span class="cnt" id="links-cnt"></span></h2>
+      <ul id="link-list"></ul>
+      <div class="empty" id="links-empty">比赛官网、提交入口、文档、设计稿,都收藏到这里。</div>
+      <form class="link-form write-only" id="link-form">
+        <input id="in-link-url" type="url" placeholder="https://…" required>
+        <div class="row2">
+          <input id="in-link-title" placeholder="链接名称" maxlength="120" required>
+          <button class="btn" type="submit">收藏</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <h2 class="sec-title" id="tasks">任务板 <span class="cnt">拖卡片换列,点卡片看详情</span></h2>
+  <section class="board" aria-label="任务板">
+    <div class="col" data-status="todo">
+      <h2><span class="dot"></span>待办 <span class="cnt" data-cnt>0</span></h2>
+      <div class="cards" data-cards></div>
+      <form class="add-form write-only" data-add>
+        <input id="add-todo" placeholder="新任务…" maxlength="200">
+        <button class="btn" type="submit">添加</button>
+      </form>
+    </div>
+    <div class="col" data-status="doing">
+      <h2><span class="dot"></span>进行中 <span class="cnt" data-cnt>0</span></h2>
+      <div class="cards" data-cards></div>
+      <form class="add-form write-only" data-add>
+        <input id="add-doing" placeholder="新任务…" maxlength="200">
+        <button class="btn" type="submit">添加</button>
+      </form>
+    </div>
+    <div class="col" data-status="done">
+      <h2><span class="dot"></span>完成 <span class="cnt" data-cnt>0</span></h2>
+      <div class="cards" data-cards></div>
+      <form class="add-form write-only" data-add>
+        <input id="add-done" placeholder="新任务…" maxlength="200">
+        <button class="btn" type="submit">添加</button>
+      </form>
+    </div>
+  </section>
+
+  <h2 class="sec-title" id="schedule">日程 <span class="cnt">地图 · 里程碑 · 记录</span></h2>
+  <section class="row-sch" aria-label="日程">
+    <div class="card">
+      <h2>备赛地图 <span class="cnt" id="map-cap"></span></h2>
+      <div id="lifemap"></div>
+      <p class="map-legend" id="map-legend">设好截止时间或加里程碑,地图就会铺开。</p>
+    </div>
+    <div class="card">
+      <h2>沿途里程碑 <span class="cnt" id="ms-cnt"></span></h2>
+      <ul id="ms-list"></ul>
+      <div class="empty" id="ms-empty">把报名、开赛、提交这些节点放进来。</div>
+      <form class="ms-form write-only" id="ms-form">
+        <input id="in-ms-date" type="date" required>
+        <input id="in-ms-label" type="text" placeholder="节点名称" maxlength="80" required>
+        <button class="btn" type="submit">添加</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>备赛记录</h2>
+      <ul id="log-list"></ul>
+      <div class="empty" id="log-empty">加任务、完成任务、勾清单,都会记在这里。</div>
+    </div>
+  </section>
+</div>
+</div>
+
+<div id="detail-overlay" hidden>
+  <div id="detail" role="dialog" aria-label="任务详情">
+    <h2>任务详情</h2>
+    <div class="field"><label for="dt-title">任务</label><input id="dt-title" maxlength="200"></div>
+    <div class="field-row">
+      <div class="field"><label for="dt-rarity">稀有度</label>
+        <select id="dt-rarity">
+          <option value="common">普通</option>
+          <option value="rare">稀有</option>
+          <option value="epic">史诗</option>
+          <option value="legend">传说</option>
+        </select>
       </div>
-      <div class="mrow">
-        <span class="pb" aria-hidden="true"><i></i></span>
-        <span class="caption-5 muted">2 / 5 完成 · 稳扎稳打</span>
-        <span class="av" aria-hidden="true"><b></b><b></b></span>
-      </div>
+      <div class="field"><label for="dt-due">截止日(可选)</label><input id="dt-due" type="date"></div>
+    </div>
+    <div class="field"><label for="dt-note">备注</label><textarea id="dt-note" rows="3" placeholder="细节、链接、注意事项…"></textarea></div>
+    <div class="panel-actions">
+      <button class="btn btn-accent" id="dt-save">保存</button>
+      <button class="btn" id="dt-close">关闭</button>
+      <span class="grow"></span>
+      <button class="btn btn-danger btn-ghost" id="dt-delete">删除任务</button>
     </div>
   </div>
-</header>
+</div>
 
-<main id="main" class="wrap">
-
-  <section class="rv" aria-label="问题与解法">
-    <div class="sec-head">
-      <p class="caption-3 eyebrow">为什么需要它</p>
-      <h2 class="heading-3">比赛最容易输给的,往往不是对手</h2>
-    </div>
-    <div class="grid-3">
-      <div class="card pain"><span class="x" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><p class="body-6 muted">截止日期记在三个地方,每个时区还不一样</p></div>
-      <div class="card pain"><span class="x" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><p class="body-6 muted">官网、文档和账号散落在聊天记录深处</p></div>
-      <div class="card pain"><span class="x" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><p class="body-6 muted">谁在做什么全靠问,提交前才发现漏了硬性要求</p></div>
-    </div>
-    <p class="body-2" style="max-width:680px;margin-top:24px">小站把这些全部收进一页:一个比赛一个标签,进去就是倒计时、任务、清单和资料。</p>
-  </section>
-
-  <section class="tagline rv" aria-label="标语">
-    <h2 class="heading-3 tl" id="tl"><span class="w">比赛</span><span class="w">可以</span><span class="w">紧张,</span><span class="w">协作</span><span class="w">不可以。</span><br><span class="w">东西</span><span class="w">都在</span><span class="w">一个地方,</span><span class="w">人</span><span class="w">就不慌。</span></h2>
-  </section>
-
-  <section id="feat" class="rv" aria-label="功能">
-    <div class="sec-head">
-      <p class="caption-3 eyebrow">功能</p>
-      <h2 class="heading-3">四件事,各管一段焦虑</h2>
-    </div>
-    <div class="grid-2">
-      <article class="card bene">
-        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg></span>
-        <h3 class="title-1">倒计时盯着截止</h3>
-        <p class="body-6 muted">每个比赛一个精确到秒的倒计时,最后 24 小时整块变红。再也不用在三个日历之间核对时区。</p>
-      </article>
-      <article class="card bene">
-        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15 4v16"/></svg></span>
-        <h3 class="title-1">任务板分清你我</h3>
-        <p class="body-6 muted">待办、进行中、完成三列,任务可认领、可移动。完成进度变成一条进度条,还会说两句鼓励的话。</p>
-      </article>
-      <article class="card bene">
-        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 12h12M4 18h12"/><path d="M19 5l1.5 1.5L23 4"/><path d="M19 11l1.5 1.5L23 10"/></svg></span>
-        <h3 class="title-1">提交清单防漏交</h3>
-        <p class="body-6 muted">把官方的硬性要求一条条列进去,交之前逐项打勾。Kiroween 的五条提交要求已经内置好了。</p>
-      </article>
-      <article class="card bene">
-        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="4"/><path d="M3 21c0-3.3 2.7-6 6-6M17 8a3 3 0 1 1 0 6M15 21c0-2.8 1.8-5 4.5-5.6"/></svg></span>
-        <h3 class="title-1">实时同步不用问</h3>
-        <p class="body-6 muted">链接、便签、任务状态即改即同步,页面顶部能看见谁在线。两个人都在时,它会提醒你们火力翻倍。</p>
-      </article>
-    </div>
-  </section>
-
-  <section id="how" class="rv" aria-label="流程">
-    <div class="sec-head">
-      <p class="caption-3 eyebrow">流程</p>
-      <h2 class="heading-3">从组队到提交,三步</h2>
-    </div>
-    <div class="steps">
-      <article class="card step">
-        <span class="no" aria-hidden="true">1</span>
-        <h3 class="title-1">添加比赛</h3>
-        <p class="body-6 muted">填上名称、目标和截止时间,官网链接顺手收进资源库。支持多个比赛并行,顶部标签切换。</p>
-      </article>
-      <article class="card step">
-        <span class="no" aria-hidden="true">2</span>
-        <h3 class="title-1">拆任务,认领</h3>
-        <p class="body-6 muted">把活拆成卡片,各自认领。谁做什么、做到哪一步,看一眼任务板就知道,不用在聊天里追问。</p>
-      </article>
-      <article class="card step">
-        <span class="no" aria-hidden="true">3</span>
-        <h3 class="title-1">交前过清单</h3>
-        <p class="body-6 muted">提交前把官方要求逐项打勾。漏交一个文件就白干一个月,这一步替你兜底。</p>
-      </article>
-    </div>
-  </section>
-
-  <section id="faq" class="rv" aria-label="常见问题">
-    <div class="sec-head">
-      <p class="caption-3 eyebrow">常见问题</p>
-      <h2 class="heading-3">你可能想问</h2>
-    </div>
-    <div class="qa">
-      <details class="q">
-        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">要花钱吗?要装什么吗?</span></summary>
-        <div class="ans"><p class="body-6 muted">不要钱,也不用安装。它是一个网页,浏览器打开链接就能用,手机和电脑都行。</p></div>
-      </details>
-      <details class="q">
-        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">队友怎么加入?</span></summary>
-        <div class="ans"><p class="body-6 muted">房主在页面右上角的 Share 菜单里邀请,给到 Contributor 或 Editor 权限就能一起编辑;只给 Viewer 则只能看。</p></div>
-      </details>
-      <details class="q">
-        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">数据存在哪里,会丢吗?</span></summary>
-        <div class="ans"><p class="body-6 muted">存在 claude.ai 为这个页面提供的共享数据库里,云端保存,改动实时同步给所有打开页面的人,关掉浏览器不会丢。</p></div>
-      </details>
-      <details class="q">
-        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">能同时管几个比赛?</span></summary>
-        <div class="ans"><p class="body-6 muted">不限数量。每个比赛是一个独立标签,各自有任务板、清单、资源库和便签,互不干扰。</p></div>
-      </details>
-      <details class="q">
-        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">不小心删错了怎么办?</span></summary>
-        <div class="ans"><p class="body-6 muted">所有删除都要点两次确认,删比赛前还会提醒会连带删掉它的任务和链接。特别重要的信息,建议在便签之外再留一份文档。</p></div>
-      </details>
-      <details class="q">
-        <summary><span class="plus" aria-hidden="true"></span><span class="title-3">它是用什么做的?</span></summary>
-        <div class="ans"><p class="body-6 muted">一个无依赖的单页应用,发布在 claude.ai 的 Artifact 平台上,用它的共享数据库和在线状态能力实现实时协作。源码在本地 git 仓库里。</p></div>
-      </details>
-    </div>
-  </section>
-
-  <section class="rv" aria-label="开始使用" style="text-align:center">
-    <div class="hero-inner">
-      <h2 class="heading-3">下一个截止日期,别再慌着找链接了</h2>
-      <p class="body-3 muted">免费,不用安装,打开就是你们的作战现场。</p>
-      <a class="btn button-md" href="https://claude.ai/artifact/Aak4QiqvzHVszJPk5Fw3SE" target="_blank" rel="noopener noreferrer">打开备赛小站
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
-      </a>
-    </div>
-  </section>
-</main>
-
-<footer>
-  <div class="wrap frow">
-    <p class="caption-5 muted">© 2026 备赛小站</p>
-    <p class="caption-5"><a class="flink" href="#feat">功能</a> · <a class="flink" href="#how">流程</a> · <a class="flink" href="#faq">问答</a></p>
-    <p class="caption-5"><span class="foot-dis">隐私政策(上线前补齐)</span> · <span class="foot-dis">使用条款(上线前补齐)</span></p>
-  </div>
-</footer>
+<div id="popover" hidden>
+  <input id="assignee-search" placeholder="搜队友名字…" autocomplete="off">
+  <div id="assignee-results"></div>
+</div>
+<div id="toast" hidden></div>
+<canvas id="fx"></canvas>
 
 <script>
 "use strict";
-(function(){
-  var reduced = false;
-  try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
-  var hasIO = "IntersectionObserver" in window;
+/* ============ 后端配置:把 Firebase 控制台给的 firebaseConfig 对象粘到这里 ============ */
+const FB_CONFIG = null; /* ← 例如 { apiKey:"...", authDomain:"...", projectId:"...", appId:"..." } */
+/* ==================================================================================== */
 
-  /* 滚动显现:只对首屏之外的区块加初始态,静态帧始终完整 */
-  if (!reduced && hasIO) {
-    var secs = document.querySelectorAll(".rv");
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (en.isIntersecting) { en.target.classList.add("on"); io.unobserve(en.target); }
-      });
-    }, { rootMargin: "0px 0px -10% 0px" });
-    secs.forEach(function(s){
-      if (s.getBoundingClientRect().top > window.innerHeight) {
-        s.classList.add("pre");
-        io.observe(s);
-      }
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+let db = null;
+let myId = null;
+let canWrite = true;
+let activeEvent = null;
+let prevXp = null;
+let tasksLoaded = false;
+let members = {};
+const state = { events: [], tasks: [], links: [], notes: [], checks: [], milestones: [], logs: [] };
+const STATUSES = ["todo", "doing", "done"];
+const RARITY = { common: "普通", rare: "稀有", epic: "史诗", legend: "传说" };
+const LEVELS = [
+  { xp: 0,  name: "空地扎营" },
+  { xp: 3,  name: "点起篝火" },
+  { xp: 6,  name: "搭起工具棚" },
+  { xp: 10, name: "盖好小木屋" },
+  { xp: 15, name: "开出小菜园" },
+  { xp: 21, name: "升起夺旗大旗" },
+  { xp: 28, name: "立起瞭望塔" },
+  { xp: 36, name: "建成小实验室" }
+];
+const STAGES = [
+  ["定方向", "M4 20V5l12 3-12 3"],
+  ["组队报名", "M9 8a3 3 0 1 0 0 .1M15 9a2.5 2.5 0 1 0 0 .1M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 15c2.8 0 5 2.2 5 5"],
+  ["方案设计", "M8 7L3 12l5 5M16 7l5 5-5 5M13 5l-2 14"],
+  ["原型开发", "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12L4 7.5M12 12v9"],
+  ["测试迭代", "M9 3h6M10 3v5l-5 10a2.5 2.5 0 0 0 2.2 3.7h9.6A2.5 2.5 0 0 0 19 18L14 8V3"],
+  ["准备路演", "M5 21V4h14l-3 4 3 4H5"]
+];
+const SEED = {
+  events: [
+    { id: "ev_cartesianforms2026", name: "CartesianForms 2026", goal: "AI 建筑设计竞赛 · 提交截止 2026-12-13(UTC),报名截止 12-06", deadline: "2026-12-13T23:59:00Z", link: "https://internshala.com/competitions/cartesianforms-architecture-reimagined-2026/", stage: 0, prize: "总价值超 $120,000(现金 $5,000)", participants: null },
+    { id: "ev_kiroween2026", name: "Kiroween 2026", goal: "Kiro 万圣节 Hackathon · 2026 届日程未公布,公布后在「比赛设置」里填截止时间", deadline: null, link: "https://kiro.devpost.com", stage: 0, prize: "", participants: null }
+  ],
+  milestones: [
+    ["ev_cartesianforms2026", "2026-09-25", "比赛启动·早鸟报名开始"],
+    ["ev_cartesianforms2026", "2026-10-20", "早鸟报名截止"],
+    ["ev_cartesianforms2026", "2026-11-15", "常规报名截止"],
+    ["ev_cartesianforms2026", "2026-11-22", "FORMAS 官方工作坊"],
+    ["ev_cartesianforms2026", "2026-12-06", "报名最终截止(23:59 UTC)"],
+    ["ev_cartesianforms2026", "2026-12-13", "作品提交截止(23:59 UTC)"]
+  ],
+  checks: [
+    ["ev_kiroween2026", "公开代码仓库,根目录保留 .kiro 文件夹(不要写进 .gitignore)"],
+    ["ev_kiroween2026", "应用部署好,有能访问的链接"],
+    ["ev_kiroween2026", "录 3 分钟 demo 视频"],
+    ["ev_kiroween2026", "写 Kiro 使用说明(specs / hooks / steering / MCP 用了哪些)"],
+    ["ev_kiroween2026", "确认赛道选择,项目贴合万圣节主题(2026 规则公布后核对)"],
+    ["ev_cartesianforms2026", "在官网完成报名(截止 2026-12-06,以官网为准)"]
+  ],
+  links: [
+    ["ev_cartesianforms2026", "CartesianForms 比赛页面(Internshala)", "https://internshala.com/competitions/cartesianforms-architecture-reimagined-2026/"],
+    ["ev_kiroween2026", "Kiro Devpost(报名/提交入口)", "https://kiro.devpost.com"],
+    ["ev_kiroween2026", "Kiroween 2025 官方公告(参考规则)", "https://kiro.dev/blog/kiroween-2025/"]
+  ]
+};
+
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => { t.hidden = true; }, 2800);
+}
+function setReadonly(msg){
+  if (!canWrite && !msg) return;
+  canWrite = false;
+  document.body.classList.add("readonly");
+  if (msg) showBanner(msg);
+}
+function showBanner(msg){
+  const b = $("#banner");
+  b.textContent = msg; b.hidden = false;
+}
+async function guarded(p){
+  try { await p; }
+  catch (e) { toast("保存失败,请重试。"); }
+}
+const esc = s => String(s == null ? "" : s);
+function nameOf(id){
+  if (!id) return "";
+  const m = members[id];
+  return (m && m.name) || "";
+}
+function avatarFor(id){
+  const name = nameOf(id) || "?";
+  const hues = ["#6E8F5A", "#5A7A9E", "#B5651D", "#7D55C8", "#C2452F"];
+  let h = 0;
+  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const c = hues[h % hues.length];
+  const letter = name.slice(0, 1).toUpperCase();
+  return "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="${c}"/><text x="12" y="16.5" font-size="12" text-anchor="middle" fill="#fff" font-family="sans-serif">${letter}</text></svg>`);
+}
+async function profilesOf(ids){
+  const out = {};
+  for (const id of ids) if (id) out[id] = { name: nameOf(id), avatarUrl: avatarFor(id) };
+  return out;
+}
+function lsGet(k){ try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch {} }
+const reduced = (() => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } })();
+
+/* ---------- init ---------- */
+init();
+async function init(){
+  wireStaticUI();
+  renderAll();
+  if (!FB_CONFIG) {
+    showBanner("营地还没接上后端:把 Firebase 配置发给 Claude 填进页面,发布后就能全球实时同步了。现在看到的是预览。");
+    setReadonly();
+    $("#presence").textContent = "";
+    return;
+  }
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    await firebase.auth().signInAnonymously();
+  } catch (e) {
+    showBanner("连接后端失败:请确认 Firebase 已开启「匿名登录」和 Firestore。");
+    setReadonly();
+    return;
+  }
+  myId = firebase.auth().currentUser.uid;
+  db = firebase.firestore();
+
+  db.collection("members").onSnapshot(snap => {
+    members = {};
+    snap.docs.forEach(d => { members[d.id] = d.data(); });
+    ensureName();
+    renderPresence(); renderTeam(); renderTasks(); renderLinks(); renderLog();
+  }, () => {});
+
+  db.collection("events").orderBy("createdAt").onSnapshot(snap => {
+    state.events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!activeEvent || !state.events.some(e => e.id === activeEvent)) {
+      activeEvent = null;
+      const saved = lsGet("activeEvent");
+      if (saved && state.events.some(e => e.id === saved)) activeEvent = saved;
+      else if (state.events.length) activeEvent = state.events[0].id;
+    }
+    $("#btn-seed").hidden = state.events.length > 0;
+    renderAll();
+  }, () => {});
+  db.collection("tasks").orderBy("createdAt").onSnapshot(snap => {
+    state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const firstLoad = !tasksLoaded;
+    tasksLoaded = true;
+    renderTasks(); renderCamp(firstLoad); renderTeam();
+  }, () => {});
+  db.collection("links").orderBy("createdAt", "desc").onSnapshot(snap => {
+    state.links = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLinks(); renderTeam();
+  }, () => {});
+  db.collection("notes").orderBy("createdAt", "desc").onSnapshot(snap => {
+    state.notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderNotes();
+  }, () => {});
+  db.collection("checks").orderBy("createdAt").onSnapshot(snap => {
+    state.checks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderChecks(); renderTeam();
+  }, () => {});
+  db.collection("milestones").orderBy("date").onSnapshot(snap => {
+    state.milestones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderIntel(); renderMap();
+  }, () => {});
+  db.collection("log").orderBy("at", "desc").limit(80).onSnapshot(snap => {
+    state.logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLog(); renderTeam();
+  }, () => {});
+
+  heartbeat();
+  setInterval(heartbeat, 30000);
+  setInterval(renderCountdown, 1000);
+  setInterval(renderPresence, 20000);
+}
+function heartbeat(){
+  if (db && myId) db.collection("members").doc(myId).set({ lastSeen: Date.now() }, { merge: true }).catch(() => {});
+}
+function ensureName(){
+  if (!myId) return;
+  const me = members[myId];
+  $("#name-card").hidden = !!(me && me.name);
+}
+$("#btn-save-name").addEventListener("click", async () => {
+  const name = $("#in-nickname").value.trim();
+  if (!name || !db || !myId) return;
+  await guarded(db.collection("members").doc(myId).set({ name, lastSeen: Date.now() }, { merge: true }));
+  $("#name-card").hidden = true;
+  toast("欢迎来到营地," + name);
+});
+function currentEvent(){ return state.events.find(e => e.id === activeEvent) || null; }
+function renderAll(){ renderTabs(); renderEvent(); renderIntel(); renderStages(); renderTasks(); renderLinks(); renderNotes(); renderChecks(); renderCamp(); renderMap(); renderLog(); renderTeam(); }
+function switchEvent(id){
+  activeEvent = id;
+  lsSet("activeEvent", id);
+  $("#settings-panel").hidden = true;
+  renderAll();
+}
+function addLog(type, text){
+  if (!db || !activeEvent) return;
+  db.collection("log").add({ type, text, event: activeEvent, by: myId, at: Date.now() }).catch(() => {});
+}
+
+/* ---------- 一键导入 ---------- */
+$("#btn-seed").addEventListener("click", async () => {
+  if (!db || state.events.length) return;
+  let t = Date.now();
+  for (const ev of SEED.events) await guarded(db.collection("events").doc(ev.id).set({ ...ev, createdAt: t++ }));
+  for (const [evId, date, label] of SEED.milestones) await guarded(db.collection("milestones").add({ event: evId, date, label, createdAt: t++ }));
+  for (const [evId, text] of SEED.checks) await guarded(db.collection("checks").add({ event: evId, text, done: false, createdAt: t++ }));
+  for (const [evId, title, url] of SEED.links) await guarded(db.collection("links").add({ event: evId, title, url, createdAt: t++, createdBy: null }));
+  toast("两场比赛和初始数据导入好了");
+});
+
+/* ---------- 营地等级 / 彩带 ---------- */
+function campXp(){ return state.tasks.filter(t => t.status === "done").length; }
+function campLevelIdx(xp){
+  let idx = 0;
+  for (let i = 0; i < LEVELS.length; i++) if (xp >= LEVELS[i].xp) idx = i;
+  return idx;
+}
+function renderCamp(suppressFx){
+  const xp = campXp();
+  const idx = campLevelIdx(xp);
+  for (let i = 1; i <= 8; i++) {
+    const g = document.getElementById("lv" + i);
+    if (!g) continue;
+    const unlocked = i - 1 <= idx;
+    const isNext = i - 1 === idx + 1;
+    g.style.display = (unlocked || isNext) ? "" : "none";
+    g.classList.toggle("ghost", isNext && !unlocked);
+  }
+  $("#lv-badge").textContent = `营地 Lv.${idx + 1}「${LEVELS[idx].name}」· 已完成 ${xp} 任务`;
+  const next = LEVELS[idx + 1];
+  $("#lv-next").textContent = next
+    ? `再完成 ${next.xp - xp} 个任务,营地解锁「${next.name}」(所有比赛的任务都算)`
+    : "营地满级,你们已经是传奇了。";
+  if (!suppressFx && tasksLoaded && prevXp !== null && idx > campLevelIdx(prevXp)) {
+    celebrate(140);
+    toast(`营地升级:${LEVELS[idx].name}`);
+  }
+  if (tasksLoaded) prevXp = xp;
+}
+function celebrate(n){
+  if (reduced) return;
+  const cv = $("#fx");
+  const ctx = cv.getContext("2d");
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cs = getComputedStyle(document.documentElement);
+  const colors = ["--flame", "--green", "--legend", "--rare"].map(v => cs.getPropertyValue(v).trim());
+  const ps = [];
+  for (let i = 0; i < n; i++) ps.push({
+    x: innerWidth / 2 + (Math.random() - .5) * 200,
+    y: innerHeight * .35,
+    vx: (Math.random() - .5) * 9,
+    vy: -Math.random() * 9 - 3,
+    r: Math.random() * 4 + 2,
+    c: colors[i % colors.length],
+    a: Math.random() * Math.PI
+  });
+  const t0 = performance.now();
+  (function frame(t){
+    const dt = (t - t0) / 1400;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (dt >= 1) return;
+    for (const p of ps) {
+      p.x += p.vx; p.y += p.vy; p.vy += .25; p.a += .1;
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(p.a);
+      ctx.globalAlpha = 1 - dt;
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+      ctx.restore();
+    }
+    requestAnimationFrame(frame);
+  })(t0);
+}
+function celebrateFor(rarity){
+  celebrate(rarity === "legend" ? 160 : rarity === "epic" ? 100 : rarity === "rare" ? 56 : 30);
+}
+
+/* ---------- tabs ---------- */
+function renderTabs(){
+  const bar = $("#tabs");
+  for (const b of $$(".tab")) b.remove();
+  const addBtn = $("#btn-add-event");
+  for (const ev of state.events) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab";
+    b.textContent = ev.name || "未命名比赛";
+    b.setAttribute("aria-pressed", ev.id === activeEvent ? "true" : "false");
+    b.addEventListener("click", () => switchEvent(ev.id));
+    bar.insertBefore(b, addBtn);
+  }
+}
+$("#btn-add-event").addEventListener("click", async () => {
+  if (!db) return;
+  try {
+    const ref = await db.collection("events").add({ name: "新比赛", goal: "", deadline: null, link: "", stage: 0, participants: null, prize: "", createdAt: Date.now(), createdBy: myId });
+    switchEvent(ref.id);
+    openSettings();
+  } catch (e) { toast("创建失败,请重试。"); }
+});
+
+/* ---------- 比赛卡 / 里程碑 / 倒计时 ---------- */
+function renderEvent(){
+  const ev = currentEvent() || {};
+  $("#event-name").textContent = ev.name || "还没有比赛";
+  const a = $("#event-name-link");
+  if (ev.link) { a.href = ev.link; $("#event-arrow").hidden = false; }
+  else { a.removeAttribute("href"); $("#event-arrow").hidden = true; }
+  const dl = ev.deadline ? new Date(ev.deadline) : null;
+  $("#event-date").textContent = (dl && !isNaN(dl))
+    ? dl.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" }) + " 截止"
+    : "未设截止时间";
+  $("#event-goal").textContent = ev.goal || (state.events.length ? (canWrite ? "点「比赛设置」写一句目标。" : "") : "点上面的「+ 添加比赛」,或点「一键导入两场比赛」。");
+  renderCountdown();
+}
+function renderIntel(){
+  const ev = currentEvent() || {};
+  $("#st-prize").textContent = ev.prize ? ev.prize : "奖金待填";
+  const sp = $("#st-participants");
+  if (ev.participants != null) { sp.hidden = false; sp.textContent = Number(ev.participants).toLocaleString("zh-CN") + " 人参赛"; }
+  else sp.hidden = true;
+
+  const mine = state.milestones.filter(m => m.event === activeEvent);
+  const now = Date.now();
+  const future = mine.filter(m => new Date(m.date + "T23:59:59").getTime() >= now);
+  const next = future.length ? future[0] : null;
+  const ul = $("#ms-list");
+  ul.textContent = "";
+  $("#ms-empty").hidden = mine.length > 0;
+  $("#ms-cnt").textContent = mine.length ? `${mine.filter(m => new Date(m.date + "T23:59:59").getTime() < now).length}/${mine.length} 已走过` : "";
+  for (const m of mine) {
+    const li = document.createElement("li");
+    const past = new Date(m.date + "T23:59:59").getTime() < now;
+    const isNext = next && m.id === next.id;
+    li.className = past ? "past" : (isNext ? "next" : "");
+    const dot = document.createElement("span"); dot.className = "ms-dot";
+    const date = document.createElement("span"); date.className = "ms-date"; date.textContent = m.date;
+    const label = document.createElement("span"); label.className = "ms-label"; label.textContent = esc(m.label);
+    li.append(dot, date, label);
+    if (isNext) {
+      const left = document.createElement("span"); left.className = "ms-left";
+      const days = Math.max(0, Math.ceil((new Date(m.date + "T23:59:59").getTime() - now) / 86400000));
+      left.textContent = `还剩 ${days} 天`;
+      li.appendChild(left);
+    }
+    if (canWrite) {
+      const del = document.createElement("button");
+      del.type = "button"; del.className = "btn-ghost"; del.textContent = "✕"; del.title = "删除节点";
+      del.addEventListener("click", () => guarded(db.collection("milestones").doc(m.id).delete()));
+      li.appendChild(del);
+    }
+    ul.appendChild(li);
+  }
+}
+function renderCountdown(){
+  const box = $("#countdown");
+  const ev = currentEvent();
+  const dl = ev && ev.deadline ? new Date(ev.deadline) : null;
+  if (!dl || isNaN(dl)) {
+    box.className = "countdown";
+    box.innerHTML = '<div class="cd-empty">未设置截止时间</div>';
+    return;
+  }
+  let ms = dl.getTime() - Date.now();
+  const over = ms <= 0;
+  if (over) ms = 0;
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor(ms / 3600000) % 24;
+  const m = Math.floor(ms / 60000) % 60;
+  const s = Math.floor(ms / 1000) % 60;
+  const tile = (n, l) => `<div class="cd-tile"><div class="cd-num">${String(n).padStart(2,"0")}</div><div class="cd-lbl">${l}</div></div>`;
+  box.className = "countdown" + (over ? " cd-over" : (ms < 86400000 ? " urgent" : ""));
+  box.innerHTML = over
+    ? '<div class="cd-tile cd-over"><div class="cd-num">00:00</div><div class="cd-lbl">已截止</div></div>'
+    : tile(d, "天") + tile(h, "时") + tile(m, "分") + tile(s, "秒");
+}
+
+/* ---------- 六阶段进度 ---------- */
+function renderStages(){
+  const ev = currentEvent();
+  const stage = ev && typeof ev.stage === "number" ? Math.max(0, Math.min(6, ev.stage)) : 0;
+  $("#stage-cnt").textContent = `${stage} / 6`;
+  $("#pg-bar").style.width = (stage / 6 * 100) + "%";
+  const row = $("#stage-row");
+  row.textContent = "";
+  STAGES.forEach(([label, path], i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "stage" + (i < stage ? " done" : i === stage ? " cur" : "");
+    b.disabled = !canWrite || !ev;
+    b.title = i < stage ? label + " · 已完成(点击回到这一步)" : label;
+    b.innerHTML = `<span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg></span><span class="lb">${label}</span>`;
+    b.addEventListener("click", () => {
+      if (!db || !ev) return;
+      const to = (i === stage) ? i + 1 : i;
+      guarded(db.collection("events").doc(ev.id).update({ stage: to }));
+      if (to > stage) addLog("stage", `推进到「${to >= 6 ? "完赛" : STAGES[to][0]}」阶段`);
     });
-  }
+    row.appendChild(b);
+  });
+  const doneT = state.tasks.filter(t => t.event === activeEvent && t.status === "done").length;
+  const totalT = state.tasks.filter(t => t.event === activeEvent).length;
+  $("#cheer").textContent = cheerLine(doneT, totalT);
+}
 
-  /* 标语逐词点亮(B11):无 JS 或减少动效时直接全亮 */
-  var tl = document.getElementById("tl");
-  if (tl && !reduced && hasIO) {
-    var words = tl.querySelectorAll(".w");
-    words.forEach(function(w){ w.classList.add("dim"); });
-    var queued = [];
-    var litNext = function(){
-      if (queued.length === 0) return;
-      queued.shift().classList.remove("dim");
-      if (queued.length) setTimeout(litNext, 90);
-    };
-    var wio = new IntersectionObserver(function(entries){
-      var had = queued.length > 0;
-      entries.forEach(function(en){
-        if (en.isIntersecting) { queued.push(en.target); wio.unobserve(en.target); }
+/* ---------- 队伍卡 ---------- */
+function pixelPerson(body, hair, longHair, u){
+  u = u || 5;
+  const px = (x, y, w, h, f) => `<rect x="${x*u}" y="${y*u}" width="${w*u}" height="${h*u}" fill="${f}"/>`;
+  let s = `<svg width="${12*u}" height="${14*u}" viewBox="0 0 ${12*u} ${14*u}" shape-rendering="crispEdges" aria-hidden="true">`;
+  s += px(2, 0, 8, 2, hair) + px(1, 1, 10, 3, hair);
+  s += px(2, 3, 8, 4, "#F0CFA6");
+  s += px(1, 3, 1, longHair ? 9 : 4, hair) + px(10, 3, 1, longHair ? 9 : 4, hair);
+  if (longHair) s += px(0, 5, 1, 6, hair) + px(11, 5, 1, 6, hair);
+  s += px(4, 4, 1, 1, "#2B211A") + px(7, 4, 1, 1, "#2B211A");
+  s += px(5, 6, 2, 1, "#D08A6E");
+  s += px(2, 7, 8, 3, body);
+  s += px(1, 10, 10, 3, body);
+  s += px(3, 13, 2, 1, "#4A3F33") + px(7, 13, 2, 1, "#4A3F33");
+  return s + `</svg>`;
+}
+function renderTeam(){
+  const score = new Map();
+  const bump = id => { if (id) score.set(id, (score.get(id) || 0) + 1); };
+  for (const t of state.tasks) if (t.assignee && t.status === "done") { bump(t.assignee); bump(t.assignee); }
+  for (const t of state.tasks) if (t.assignee && t.status === "doing") bump(t.assignee);
+  for (const l of state.links) bump(l.createdBy);
+  for (const c of state.checks) if (c.done) bump(c.doneBy);
+  for (const id of Object.keys(members)) if (!score.has(id)) score.set(id, 0);
+  const ids = [...score.keys()].sort((a, b) => score.get(b) - score.get(a)).slice(0, 6);
+  const box = $("#team");
+  box.textContent = "";
+  $("#team-empty").hidden = ids.length > 0;
+  const TITLES = [[15, "传奇营建家"], [8, "营地主理人"], [4, "营地木匠"], [1, "生火师"], [0, "露营新人"]];
+  const BADGES = ["👑", "🌙", "⭐", "🍀", "🫐", "🌰"];
+  const dayMs = 86400000;
+  const todayD = Math.floor(Date.now() / dayMs);
+  let mi = 0;
+  for (const id of ids) {
+    const pname = nameOf(id);
+    const longHair = /crystal/i.test(pname) ? true : /xuan/i.test(pname) ? false : mi === 0;
+    const doneN = state.tasks.filter(t => t.assignee === id && t.status === "done").length;
+    const mate = document.createElement("div"); mate.className = "mate";
+    const pv = document.createElement("div"); pv.className = "pv";
+    pv.innerHTML = pixelPerson(longHair ? "#6E8F5A" : "#5A7A9E", longHair ? "#4A3222" : "#2E2620", longHair, 5);
+    mate.appendChild(pv);
+    const nm = document.createElement("div"); nm.className = "nm";
+    nm.textContent = (pname || (id === myId ? "你" : "队友")) + " " + (BADGES[mi] || "");
+    mate.appendChild(nm);
+    const tl = document.createElement("div"); tl.className = "tl";
+    tl.textContent = TITLES.find(x => doneN >= x[0])[1] + " · 完成 " + doneN;
+    mate.appendChild(tl);
+    const counts = new Array(14).fill(0);
+    for (const l of state.logs) {
+      if (l.type === "task_done" && l.by === id) {
+        const idx = 13 - (todayD - Math.floor(l.at / dayMs));
+        if (idx >= 0 && idx < 14) counts[idx]++;
+      }
+    }
+    const mx = Math.max(1, ...counts);
+    const chart = document.createElement("div"); chart.className = "m-chart";
+    chart.title = "最近 14 天完成的任务";
+    for (const c of counts) {
+      const bar = document.createElement("i");
+      bar.style.height = (c === 0 ? 2 : (c / mx * 16 + 4)) + "px";
+      if (c === 0) bar.style.opacity = ".3";
+      chart.appendChild(bar);
+    }
+    mate.appendChild(chart);
+    box.appendChild(mate);
+    mi++;
+  }
+}
+
+/* ---------- 比赛设置 ---------- */
+function openSettings(){
+  const ev = currentEvent();
+  if (!ev) { toast("先添加一个比赛。"); return; }
+  $("#in-name").value = ev.name || "";
+  $("#in-goal").value = ev.goal || "";
+  $("#in-link").value = ev.link || "";
+  $("#in-participants").value = (ev.participants == null ? "" : ev.participants);
+  $("#in-prize").value = ev.prize || "";
+  if (ev.deadline) {
+    const dt = new Date(ev.deadline);
+    if (!isNaN(dt)) {
+      const pad = n => String(n).padStart(2, "0");
+      $("#in-deadline").value = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    } else $("#in-deadline").value = "";
+  } else $("#in-deadline").value = "";
+  $("#settings-panel").hidden = false;
+  $("#in-name").focus();
+}
+$("#btn-settings").addEventListener("click", () => {
+  const p = $("#settings-panel");
+  if (!p.hidden) { p.hidden = true; return; }
+  openSettings();
+});
+$("#btn-cancel-settings").addEventListener("click", () => { $("#settings-panel").hidden = true; });
+$("#btn-save-settings").addEventListener("click", async () => {
+  const ev = currentEvent();
+  if (!db || !ev) return;
+  const dlv = $("#in-deadline").value;
+  const pv = $("#in-participants").value.trim();
+  const participants = pv === "" ? null : Math.max(0, parseInt(pv, 10) || 0);
+  const prize = $("#in-prize").value.trim();
+  await guarded(db.collection("events").doc(ev.id).update({
+    name: $("#in-name").value.trim() || "未命名比赛",
+    goal: $("#in-goal").value.trim(),
+    link: $("#in-link").value.trim(),
+    deadline: dlv ? new Date(dlv).toISOString() : null,
+    participants, prize,
+    updatedAt: Date.now(), updatedBy: myId
+  }));
+  $("#settings-panel").hidden = true;
+});
+$("#btn-delete-event").addEventListener("click", async e => {
+  const btn = e.currentTarget;
+  const ev = currentEvent();
+  if (!db || !ev) return;
+  if (!btn.dataset.arm) {
+    btn.dataset.arm = "1";
+    btn.textContent = "确认删除?任务、清单、里程碑会一起删掉";
+    setTimeout(() => { delete btn.dataset.arm; btn.textContent = "删除这个比赛"; }, 3000);
+    return;
+  }
+  delete btn.dataset.arm;
+  btn.textContent = "删除这个比赛";
+  const dead = [
+    ...state.tasks.filter(t => t.event === ev.id).map(t => ["tasks", t.id]),
+    ...state.links.filter(l => l.event === ev.id).map(l => ["links", l.id]),
+    ...state.notes.filter(n => n.event === ev.id).map(n => ["notes", n.id]),
+    ...state.checks.filter(c => c.event === ev.id).map(c => ["checks", c.id]),
+    ...state.milestones.filter(m => m.event === ev.id).map(m => ["milestones", m.id]),
+    ...state.logs.filter(l => l.event === ev.id).map(l => ["log", l.id]),
+    ["events", ev.id]
+  ];
+  for (const [col, id] of dead) await guarded(db.collection(col).doc(id).delete());
+  $("#settings-panel").hidden = true;
+});
+
+/* ---------- 静态表单 ---------- */
+function wireStaticUI(){
+  $$(".col").forEach(col => {
+    const status = col.dataset.status;
+    col.querySelector("[data-add]").addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!db) return;
+      if (!activeEvent) { toast("先在顶部添加一个比赛。"); return; }
+      const input = e.target.querySelector("input");
+      const title = input.value.trim();
+      if (!title) return;
+      input.value = "";
+      await guarded(db.collection("tasks").add({
+        title, status, event: activeEvent, assignee: null, rarity: "common", due: null, note: "", createdAt: Date.now(), createdBy: myId
+      }));
+      addLog("task_add", `加了任务「${title}」`);
+    });
+    col.addEventListener("dragover", e => { if (canWrite) { e.preventDefault(); col.classList.add("drop"); } });
+    col.addEventListener("dragleave", () => col.classList.remove("drop"));
+    col.addEventListener("drop", e => {
+      e.preventDefault();
+      col.classList.remove("drop");
+      if (!canWrite || !db) return;
+      const id = e.dataTransfer.getData("text/plain");
+      const t = state.tasks.find(x => x.id === id);
+      if (!t || t.status === status) return;
+      guarded(db.collection("tasks").doc(id).update({ status }));
+      if (status === "done") { celebrateFor(t.rarity); addLog("task_done", `完成了「${t.title}」`); }
+    });
+  });
+  $("#link-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!db) return;
+    if (!activeEvent) { toast("先在顶部添加一个比赛。"); return; }
+    const url = $("#in-link-url").value.trim();
+    const title = $("#in-link-title").value.trim();
+    if (!url || !title) return;
+    $("#in-link-url").value = ""; $("#in-link-title").value = "";
+    await guarded(db.collection("links").add({ url, title, event: activeEvent, createdAt: Date.now(), createdBy: myId }));
+  });
+  $("#check-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!db) return;
+    if (!activeEvent) { toast("先在顶部添加一个比赛。"); return; }
+    const text = $("#in-check-text").value.trim();
+    if (!text) return;
+    $("#in-check-text").value = "";
+    await guarded(db.collection("checks").add({ text, done: false, event: activeEvent, createdAt: Date.now(), createdBy: myId }));
+  });
+  $("#ms-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!db) return;
+    if (!activeEvent) { toast("先在顶部添加一个比赛。"); return; }
+    const date = $("#in-ms-date").value;
+    const label = $("#in-ms-label").value.trim();
+    if (!date || !label) return;
+    $("#in-ms-label").value = "";
+    await guarded(db.collection("milestones").add({ date, label, event: activeEvent, createdAt: Date.now(), createdBy: myId }));
+  });
+  $("#btn-add-note").addEventListener("click", async () => {
+    if (!db) return;
+    if (!activeEvent) { toast("先在顶部添加一个比赛。"); return; }
+    await guarded(db.collection("notes").add({ text: "", event: activeEvent, likes: 0, createdAt: Date.now(), createdBy: myId, updatedAt: Date.now() }));
+  });
+  document.addEventListener("click", e => {
+    const pop = $("#popover");
+    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest(".assignee")) pop.hidden = true;
+  });
+  $("#detail-overlay").addEventListener("click", e => { if (e.target.id === "detail-overlay") closeDetail(); });
+  $("#dt-close").addEventListener("click", closeDetail);
+  $("#dt-save").addEventListener("click", saveDetail);
+  $("#dt-delete").addEventListener("click", e => {
+    const btn = e.currentTarget;
+    if (!btn.dataset.arm) {
+      btn.dataset.arm = "1"; btn.textContent = "确认删除?";
+      setTimeout(() => { delete btn.dataset.arm; btn.textContent = "删除任务"; }, 2200);
+      return;
+    }
+    delete btn.dataset.arm; btn.textContent = "删除任务";
+    if (detailTaskId) guarded(db.collection("tasks").doc(detailTaskId).delete());
+    closeDetail();
+  });
+}
+
+/* ---------- 任务板 ---------- */
+const EMPTY_TEXT = {
+  todo: "还没有任务。从一件小事开始就好 ✦",
+  doing: "这一列空着。挑一件,开始!",
+  done: "完成的任务会变成营地的砖"
+};
+function cheerLine(done, total){
+  if (total === 0) return "写下第一个任务,营地就破土了 ✦";
+  if (done === 0) return "开工就是胜利,加油!";
+  if (done / total < 0.5) return "稳扎稳打,营地在长大 ✦";
+  if (done < total) return "已经过半啦,冲冲冲!";
+  return "全部完成!营地今晚加餐 ✦✦✦";
+}
+async function renderTasks(){
+  const mine = state.tasks.filter(t => t.event === activeEvent);
+  const ps = await profilesOf(mine.map(t => t.assignee));
+  for (const status of STATUSES) {
+    const col = document.querySelector(`.col[data-status="${status}"]`);
+    const list = mine.filter(t => (t.status || "todo") === status);
+    col.querySelector("[data-cnt]").textContent = list.length;
+    const box = col.querySelector("[data-cards]");
+    box.textContent = "";
+    if (list.length === 0) {
+      const d = document.createElement("div");
+      d.className = "empty";
+      d.textContent = EMPTY_TEXT[status];
+      box.appendChild(d);
+      continue;
+    }
+    for (const t of list) box.appendChild(taskCard(t, ps));
+  }
+  renderStages();
+}
+function taskCard(t, ps){
+  const card = document.createElement("div");
+  const rarity = t.rarity || "common";
+  card.className = "task r-" + rarity;
+  card.addEventListener("click", e => { if (!e.target.closest("button")) openDetail(t); });
+  if (canWrite) {
+    card.draggable = true;
+    card.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => card.classList.remove("dragging"));
+  }
+  const title = document.createElement("p");
+  title.className = "t-title";
+  title.textContent = esc(t.title);
+  card.appendChild(title);
+  const chips = document.createElement("div");
+  chips.className = "t-chips";
+  if (rarity !== "common") {
+    const rc = document.createElement("span");
+    rc.className = "chip c-" + rarity;
+    rc.textContent = RARITY[rarity] || rarity;
+    chips.appendChild(rc);
+  }
+  if (t.due) {
+    const dueMs = new Date(t.due + "T23:59:59").getTime();
+    const days = Math.ceil((dueMs - Date.now()) / 86400000);
+    const dc = document.createElement("span");
+    dc.className = "chip" + (days < 0 ? " c-due-bad" : days <= 3 ? " c-due-warn" : "");
+    dc.textContent = t.due.slice(5).replace("-", "/") + (days < 0 ? " 已过" : days === 0 ? " 今天截止" : ` 还剩${days}天`);
+    chips.appendChild(dc);
+  }
+  if (t.note) {
+    const nc = document.createElement("span");
+    nc.className = "chip";
+    nc.textContent = "备注";
+    chips.appendChild(nc);
+  }
+  if (chips.children.length) card.appendChild(chips);
+  const foot = document.createElement("div");
+  foot.className = "t-foot";
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "assignee" + (t.assignee ? "" : " unset");
+  if (t.assignee) {
+    const p = ps[t.assignee];
+    const img = document.createElement("img");
+    img.src = p ? p.avatarUrl : "";
+    img.alt = "";
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = (p && p.name) || "队友";
+    chip.append(img, nm);
+  } else chip.textContent = "认领";
+  if (canWrite) chip.addEventListener("click", e => { e.stopPropagation(); openAssignee(chip, t); });
+  else chip.disabled = true;
+  foot.appendChild(chip);
+  const spacer = document.createElement("span");
+  spacer.className = "spacer";
+  foot.appendChild(spacer);
+  if (canWrite) {
+    const idx = STATUSES.indexOf(t.status || "todo");
+    if (idx > 0) foot.appendChild(moveBtn("◀", STATUSES[idx-1], t, "移到上一列"));
+    if (idx < 2) foot.appendChild(moveBtn("▶", STATUSES[idx+1], t, "移到下一列"));
+  }
+  card.appendChild(foot);
+  return card;
+}
+function moveBtn(glyph, to, t, label){
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "btn-ghost"; b.textContent = glyph; b.title = label; b.setAttribute("aria-label", label);
+  b.addEventListener("click", () => {
+    guarded(db.collection("tasks").doc(t.id).update({ status: to }));
+    if (to === "done") { celebrateFor(t.rarity); addLog("task_done", `完成了「${t.title}」`); }
+  });
+  return b;
+}
+
+/* ---------- 任务详情 ---------- */
+let detailTaskId = null;
+function openDetail(t){
+  detailTaskId = t.id;
+  $("#dt-title").value = t.title || "";
+  $("#dt-rarity").value = t.rarity || "common";
+  $("#dt-due").value = t.due || "";
+  $("#dt-note").value = t.note || "";
+  $("#detail-overlay").hidden = false;
+  $("#dt-title").focus();
+}
+function closeDetail(){ $("#detail-overlay").hidden = true; detailTaskId = null; }
+async function saveDetail(){
+  if (!db || !detailTaskId) { closeDetail(); return; }
+  await guarded(db.collection("tasks").doc(detailTaskId).update({
+    title: $("#dt-title").value.trim() || "未命名任务",
+    rarity: $("#dt-rarity").value,
+    due: $("#dt-due").value || null,
+    note: $("#dt-note").value.trim()
+  }));
+  closeDetail();
+}
+
+/* ---------- 认领 ---------- */
+let assigneeTask = null;
+function openAssignee(anchor, task){
+  assigneeTask = task;
+  const pop = $("#popover");
+  const r = anchor.getBoundingClientRect();
+  pop.hidden = false;
+  pop.style.left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - 256)) + "px";
+  pop.style.top = (window.scrollY + r.bottom + 6) + "px";
+  const inp = $("#assignee-search");
+  inp.value = "";
+  runSearch("");
+  inp.focus();
+}
+$("#assignee-search").addEventListener("input", e => runSearch(e.target.value));
+function runSearch(q){
+  const box = $("#assignee-results");
+  box.textContent = "";
+  const addOpt = (label, avatar, onPick) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (avatar) { const img = document.createElement("img"); img.src = avatar; img.alt = ""; b.appendChild(img); }
+    const sp = document.createElement("span"); sp.textContent = label; b.appendChild(sp);
+    b.addEventListener("click", onPick);
+    box.appendChild(b);
+  };
+  if (assigneeTask && assigneeTask.assignee) addOpt("取消分配", null, () => pickAssignee(null));
+  const ql = q.trim().toLowerCase();
+  for (const [id, m] of Object.entries(members)) {
+    const nm = (m && m.name) || "";
+    if (ql && !nm.toLowerCase().includes(ql)) continue;
+    addOpt(nm || (id === myId ? "我(还没起名)" : "无名队友"), avatarFor(id), () => pickAssignee(id));
+  }
+  if (!Object.keys(members).length) {
+    const d = document.createElement("div");
+    d.style.cssText = "font-size:12px;color:var(--ink-soft);padding:6px 8px";
+    d.textContent = "队友打开过这个页面并起了名字,就会出现在这里。";
+    box.appendChild(d);
+  }
+}
+function pickAssignee(id){
+  if (assigneeTask) guarded(db.collection("tasks").doc(assigneeTask.id).update({ assignee: id }));
+  $("#popover").hidden = true;
+}
+
+/* ---------- 清单 ---------- */
+function renderChecks(){
+  const ul = $("#check-list");
+  const mine = state.checks.filter(c => c.event === activeEvent);
+  $("#checks-empty").hidden = mine.length > 0;
+  ul.textContent = "";
+  for (const c of mine) {
+    const li = document.createElement("li");
+    if (c.done) li.className = "ck-done";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = "check-" + c.id;
+    cb.checked = !!c.done;
+    cb.disabled = !canWrite;
+    cb.addEventListener("change", () => {
+      guarded(db.collection("checks").doc(c.id).update({ done: cb.checked, doneBy: myId, updatedAt: Date.now() }));
+      if (cb.checked) addLog("check_done", `勾掉了清单「${c.text}」`);
+    });
+    const lb = document.createElement("label");
+    lb.className = "txt";
+    lb.htmlFor = cb.id;
+    lb.textContent = esc(c.text);
+    li.append(cb, lb);
+    if (canWrite) {
+      const del = document.createElement("button");
+      del.type = "button"; del.className = "btn-ghost"; del.textContent = "✕"; del.title = "删除";
+      del.addEventListener("click", () => {
+        if (del.dataset.arm) { guarded(db.collection("checks").doc(c.id).delete()); return; }
+        del.dataset.arm = "1"; del.textContent = "确认?";
+        setTimeout(() => { delete del.dataset.arm; del.textContent = "✕"; }, 2200);
       });
-      if (!had && queued.length) litNext();
-    }, { rootMargin: "0px 0px -35% 0px" });
-    words.forEach(function(w){ wio.observe(w); });
+      li.appendChild(del);
+    }
+    ul.appendChild(li);
   }
+  const done = mine.filter(c => c.done).length;
+  $("#check-cnt").textContent = mine.length ? `${done}/${mine.length}` : "";
+}
 
-  /* hero 示意图里的倒计时真实走秒(演示数据) */
-  var md = document.getElementById("md"), mh = document.getElementById("mh"),
-      mm = document.getElementById("mm"), ms = document.getElementById("ms");
-  if (md && mh && mm && ms) {
-    var target = Date.now() + (((34 * 24 + 7) * 60 + 52) * 60 + 10) * 1000;
-    var pad = function(n){ return String(n).padStart(2, "0"); };
-    var tick = function(){
-      var t = Math.max(0, target - Date.now());
-      md.textContent = Math.floor(t / 86400000);
-      mh.textContent = pad(Math.floor(t / 3600000) % 24);
-      mm.textContent = pad(Math.floor(t / 60000) % 60);
-      ms.textContent = pad(Math.floor(t / 1000) % 60);
-    };
-    tick();
-    setInterval(tick, 1000);
+/* ---------- 链接 ---------- */
+async function renderLinks(){
+  const mine = state.links.filter(l => l.event === activeEvent);
+  const ps = await profilesOf(mine.map(l => l.createdBy));
+  const ul = $("#link-list");
+  ul.textContent = "";
+  $("#links-empty").hidden = mine.length > 0;
+  $("#links-cnt").textContent = mine.length ? mine.length + " 条" : "";
+  for (const l of mine) {
+    const li = document.createElement("li");
+    const fold = document.createElement("span");
+    fold.className = "fold";
+    fold.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    li.appendChild(fold);
+    const a = document.createElement("a");
+    let href = esc(l.url);
+    if (!/^https?:\/\//i.test(href)) href = "https://" + href;
+    a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.textContent = esc(l.title) || href;
+    li.appendChild(a);
+    const by = document.createElement("span");
+    by.className = "by";
+    const p = l.createdBy ? ps[l.createdBy] : null;
+    by.textContent = p && p.name ? p.name : "";
+    li.appendChild(by);
+    if (canWrite) {
+      const del = document.createElement("button");
+      del.type = "button"; del.className = "btn-ghost"; del.textContent = "✕"; del.title = "删除链接";
+      del.addEventListener("click", () => guarded(db.collection("links").doc(l.id).delete()));
+      li.appendChild(del);
+    }
+    const ar = document.createElement("span");
+    ar.className = "arrow"; ar.textContent = "→";
+    li.appendChild(ar);
+    ul.appendChild(li);
   }
-})();
+}
+
+/* ---------- 想法库 ---------- */
+const noteTimers = new Map();
+function renderNotes(){
+  const grid = $("#note-grid");
+  const mine = state.notes.filter(n => n.event === activeEvent);
+  $("#notes-empty").hidden = mine.length > 0;
+  $("#notes-cnt").textContent = mine.length ? mine.length + " 个灵感" : "";
+  const seen = new Set();
+  for (const n of mine) {
+    seen.add(n.id);
+    let card = grid.querySelector(`[data-id="${CSS.escape(n.id)}"]`);
+    if (!card) { card = noteCard(n); grid.appendChild(card); }
+    const ta = card.querySelector("textarea");
+    const text = esc(n.text);
+    if (document.activeElement !== ta && ta.value !== text) ta.value = text;
+    card.querySelector(".like").textContent = "♥ " + (n.likes || 0);
+    card.querySelector(".like").dataset.likes = n.likes || 0;
+    card.querySelector(".n-when").textContent = n.updatedAt ? new Date(n.updatedAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  }
+  for (const c of [...grid.children]) if (!seen.has(c.dataset.id)) c.remove();
+}
+function noteCard(n){
+  const card = document.createElement("div");
+  card.className = "note";
+  card.dataset.id = n.id;
+  const ta = document.createElement("textarea");
+  ta.id = "note-" + n.id;
+  ta.placeholder = "写点什么…";
+  ta.readOnly = !canWrite;
+  ta.addEventListener("input", () => {
+    clearTimeout(noteTimers.get(n.id));
+    noteTimers.set(n.id, setTimeout(() => {
+      guarded(db.collection("notes").doc(n.id).update({ text: ta.value, updatedAt: Date.now(), updatedBy: myId }));
+    }, 700));
+  });
+  card.appendChild(ta);
+  const foot = document.createElement("div");
+  foot.className = "n-foot";
+  const like = document.createElement("button");
+  like.type = "button"; like.className = "like"; like.textContent = "♥ 0"; like.title = "给这个想法点个赞";
+  like.addEventListener("click", () => {
+    const cur = parseInt(like.dataset.likes || "0", 10) || 0;
+    guarded(db.collection("notes").doc(n.id).update({ likes: cur + 1 }));
+  });
+  foot.appendChild(like);
+  const when = document.createElement("span");
+  when.className = "n-when";
+  foot.appendChild(when);
+  if (canWrite) {
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "btn-ghost"; del.textContent = "删除";
+    del.addEventListener("click", () => {
+      if (del.dataset.arm) { guarded(db.collection("notes").doc(n.id).delete()); return; }
+      del.dataset.arm = "1"; del.textContent = "确认删除?";
+      setTimeout(() => { delete del.dataset.arm; del.textContent = "删除"; }, 2200);
+    });
+    foot.appendChild(del);
+  }
+  card.appendChild(foot);
+  return card;
+}
+
+/* ---------- 备赛地图 / 记录 ---------- */
+function renderMap(){
+  const box = $("#lifemap");
+  box.textContent = "";
+  const legend = $("#map-legend");
+  const cap = $("#map-cap");
+  cap.textContent = "";
+  const ev = currentEvent();
+  if (!ev) { legend.textContent = "添加比赛后,地图会在这里铺开。"; return; }
+  const ms = state.milestones.filter(m => m.event === activeEvent);
+  const day = 86400000;
+  const floorD = d => Math.floor(d.getTime() / day);
+  const dates = [];
+  if (ev.createdAt) dates.push(floorD(new Date(ev.createdAt)));
+  for (const m of ms) dates.push(floorD(new Date(m.date + "T12:00:00")));
+  if (ev.deadline) { const dl = new Date(ev.deadline); if (!isNaN(dl)) dates.push(floorD(dl)); }
+  if (dates.length < 2) { legend.textContent = "设好截止时间或加里程碑,地图就会铺开:一格一天。"; return; }
+  const start = Math.min(...dates);
+  const end = Math.max(...dates);
+  const today = floorD(new Date());
+  const total = end - start + 1;
+  const unit = total > 112 ? 7 : 1;
+  const n = Math.ceil(total / unit);
+  const msMap = new Map();
+  for (const m of ms) {
+    const idx = Math.floor((floorD(new Date(m.date + "T12:00:00")) - start) / unit);
+    msMap.set(idx, (msMap.get(idx) ? msMap.get(idx) + " / " : "") + m.label);
+  }
+  const todayIdx = Math.floor((today - start) / unit);
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("div");
+    c.className = "cell" + (i < todayIdx ? " past" : i === todayIdx ? " today" : "") + (msMap.has(i) ? " ms" : "");
+    const dt = new Date((start + i * unit) * day);
+    c.title = dt.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }) + (msMap.has(i) ? " · " + msMap.get(i) : "");
+    box.appendChild(c);
+  }
+  cap.textContent = unit === 1 ? "一格一天" : "一格一周";
+  legend.textContent = "绿色是走过的日子,橙色是今天,金框是里程碑。";
+}
+async function renderLog(){
+  const mine = state.logs.filter(l => l.event === activeEvent).slice(0, 30);
+  const ps = await profilesOf(mine.map(l => l.by));
+  const ul = $("#log-list");
+  ul.textContent = "";
+  $("#log-empty").hidden = mine.length > 0;
+  for (const l of mine) {
+    const li = document.createElement("li");
+    const d = document.createElement("span"); d.className = "ms-date";
+    d.textContent = new Date(l.at).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const tx = document.createElement("span"); tx.className = "lg-text";
+    const p = l.by ? ps[l.by] : null;
+    tx.textContent = ((p && p.name) || (l.by === myId ? "你" : "队友")) + " " + esc(l.text);
+    li.append(d, tx);
+    ul.appendChild(li);
+  }
+}
+
+/* ---------- 在线状态(心跳) ---------- */
+function renderPresence(){
+  const now = Date.now();
+  const online = Object.values(members).filter(m => m && m.lastSeen && now - m.lastSeen < 75000).length;
+  $("#presence").textContent = online <= 1 ? "现在营地里只有你" : online === 2 ? "两个人都在营地,双倍战斗力 ♥" : `${online} 人在营地,一起冲 ✦`;
+}
 </script>
+</body>
+</html>
