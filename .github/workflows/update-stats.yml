@@ -1,0 +1,42 @@
+name: 每日刷新 Kiroween 参赛人数
+
+on:
+  schedule:
+    - cron: "0 13 * * *"   # 每天 13:00 UTC(北京 21:00 / 美东 8~9am)
+  workflow_dispatch: {}     # 也可以在 Actions 页手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 抓取 Devpost 人数并写入 Firestore
+        run: |
+          python3 - << 'EOF'
+          import json, re, sys, time, urllib.request
+
+          UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"}
+          API_KEY = "AIzaSyC_gLfsZKaWo95hBepWsvf4AgLjp7p_hnw"  # Firebase 公开客户端 key,与网站内嵌的是同一个
+          DOC = "https://firestore.googleapis.com/v1/projects/hackathon2026-18d68/databases/(default)/documents/events/ev_kiroween2026"
+
+          page = urllib.request.urlopen(urllib.request.Request("https://kiroween.devpost.com/", headers=UA), timeout=30).read().decode("utf-8", "ignore")
+          m = re.search(r"Participants \((\d+)\)", page)
+          if not m:
+              print("页面上没找到人数(Devpost 可能改版或拦截了 Actions 的 IP),本次跳过")
+              sys.exit(0)
+          count = int(m.group(1))
+          print("Devpost 当前人数:", count)
+
+          tok = json.loads(urllib.request.urlopen(urllib.request.Request(
+              f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={API_KEY}",
+              data=b'{"returnSecureToken":true}',
+              headers={"Content-Type": "application/json"}), timeout=30).read())["idToken"]
+
+          fields = {"participants": {"integerValue": str(count)},
+                    "statsUpdatedAt": {"integerValue": str(int(time.time() * 1000))}}
+          mask = "&".join("updateMask.fieldPaths=" + k for k in fields)
+          urllib.request.urlopen(urllib.request.Request(
+              f"{DOC}?{mask}", method="PATCH",
+              data=json.dumps({"fields": fields}).encode(),
+              headers={"Authorization": "Bearer " + tok, "Content-Type": "application/json"}), timeout=30).read()
+          print("看板已更新")
+          EOF
