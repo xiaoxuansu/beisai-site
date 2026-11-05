@@ -722,7 +722,7 @@ const STAGES = [
 const SEED = {
   events: [
     { id: "ev_cartesianforms2026", name: "CartesianForms 2026", goal: "AI 建筑设计竞赛 · 提交截止 2026-12-13(UTC),报名截止 12-06", deadline: "2026-12-13T23:59:00Z", link: "https://internshala.com/competitions/cartesianforms-architecture-reimagined-2026/", stage: 0, prize: "总价值超 $120,000(现金 $5,000)", participants: null },
-    { id: "ev_kiroween2026", name: "Kiroween 2026", goal: "Kiro 万圣节 Hackathon · 2026 届日程未公布,公布后在「比赛设置」里填截止时间", deadline: null, link: "https://kiro.devpost.com", stage: 0, prize: "", participants: null }
+    { id: "ev_kiroween2026", name: "Kiroween 2026", goal: "Kiro 万圣节 Hackathon · 提交期 10-30 ~ 12-04(PT 下午2点);只收 10-30 后新开的项目,必须用 Kiro 构建", deadline: "2026-12-04T22:00:00Z", link: "https://kiroween.devpost.com", stage: 0, prize: "$100,000", participants: 9289 }
   ],
   milestones: [
     ["ev_cartesianforms2026", "2026-09-25", "比赛启动·早鸟报名开始"],
@@ -730,20 +730,27 @@ const SEED = {
     ["ev_cartesianforms2026", "2026-11-15", "常规报名截止"],
     ["ev_cartesianforms2026", "2026-11-22", "FORMAS 官方工作坊"],
     ["ev_cartesianforms2026", "2026-12-06", "报名最终截止(23:59 UTC)"],
-    ["ev_cartesianforms2026", "2026-12-13", "作品提交截止(23:59 UTC)"]
+    ["ev_cartesianforms2026", "2026-12-13", "作品提交截止(23:59 UTC)"],
+    ["ev_kiroween2026", "2026-10-30", "开赛·提交期开始(只收新项目)"],
+    ["ev_kiroween2026", "2026-11-11", "Devpost Build Session(10:00 PT)"],
+    ["ev_kiroween2026", "2026-12-01", "免费 4000 Kiro credits 申请截止(12:00 PT)"],
+    ["ev_kiroween2026", "2026-12-04", "作品提交截止(14:00 PT)"],
+    ["ev_kiroween2026", "2026-12-16", "评审期开始(至 2027-01-29,以官网为准)"]
   ],
   checks: [
-    ["ev_kiroween2026", "公开代码仓库,根目录保留 .kiro 文件夹(不要写进 .gitignore)"],
+    ["ev_kiroween2026", "GitHub 公开仓库(不能用 GitLab):根目录保留 .kiro 文件夹 + OSI 开源许可证(仓库 About 区可见)"],
     ["ev_kiroween2026", "应用部署好,有能访问的链接"],
-    ["ev_kiroween2026", "录 3 分钟 demo 视频"],
+    ["ev_kiroween2026", "录 ≤3 分钟 demo 视频传 YouTube 设公开,展示应用真实运行(别用版权音乐)"],
     ["ev_kiroween2026", "写 Kiro 使用说明(specs / hooks / steering / MCP 用了哪些)"],
-    ["ev_kiroween2026", "确认赛道选择,项目贴合万圣节主题(2026 规则公布后核对)"],
+    ["ev_kiroween2026", "选定赛道:Resurrection / Frankenstein / Skeleton Crew / Costume Contest,并勾选想参加的 Bonus 奖项"],
+    ["ev_kiroween2026", "12-01 中午(PT)前在 Resources 页申请 4000 免费 Kiro credits"],
+    ["ev_kiroween2026", "确认项目 10-30 之后才开工(老项目/去年项目不符合资格)"],
     ["ev_cartesianforms2026", "在官网完成报名(截止 2026-12-06,以官网为准)"]
   ],
   links: [
     ["ev_cartesianforms2026", "CartesianForms 比赛页面(Internshala)", "https://internshala.com/competitions/cartesianforms-architecture-reimagined-2026/"],
-    ["ev_kiroween2026", "Kiro Devpost(报名/提交入口)", "https://kiro.devpost.com"],
-    ["ev_kiroween2026", "Kiroween 2025 官方公告(参考规则)", "https://kiro.dev/blog/kiroween-2025/"]
+    ["ev_kiroween2026", "Kiroween 2026 Devpost(报名/提交入口)", "https://kiroween.devpost.com"],
+    ["ev_kiroween2026", "Kiro 官网(下载 IDE / 文档)", "https://kiro.dev"]
   ]
 };
 
